@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "generated": "2026-11-24T00:00:00Z",
+  "runtimes": {
+    "php": [
+      {
+        "version": "8.4.28",
+        "url": "https://windows.php.net/downloads/releases/php-8.4.28-nts-Win32-vs17-x64.zip",
+        "sha256": "c1f9280588b7b6ad7b518969022f0b0175f106fab9d0639ad0e4ce7cd47ac1ed",
+        "arch": "x64",
+        "notes": "nts-vs17"
+      },
+      {
+        "version": "8.3.37",
+        "url": "https://windows.php.net/downloads/releases/php-8.3.37-nts-Win32-vs16-x64.zip",
+        "sha256": "38808a798485e1c0938dfcce7e942131415fc6c7834f83a5a85a4c4edb5539d6",
+        "arch": "x64",
+        "notes": "nts-vs16"
+      }
+    ],
+    "nginx": [
+      {
+        "version": "1.30.8",
+        "url": "https://nginx.org/download/nginx-1.30.8.zip",
+        "sha256": "ccd0c03ff665d4534e6595e455624ededc9eeb11a81a6a128920fcc928be1151",
+        "root": "nginx-1.30.8",
+        "arch": "x64",
+        "notes": "nginx.org publishes PGP signatures, not hashes; sha256 computed by Ebur"
+      }
+    ]
+  }
+}
