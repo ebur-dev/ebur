@@ -67,6 +67,16 @@
         "notes": "LTS until 2028-06-04; sha256 from the MariaDB downloads API"
       }
     ],
+    "composer": [
+      {
+        "version": "2.11.3",
+        "url": "https://getcomposer.org/download/2.11.3/composer.phar",
+        "sha256": "04f8b003da4e3a2459056591fbfebd02b4dc3e5adeb158616b90cf55a65113ec",
+        "file": "composer.phar",
+        "arch": "x64",
+        "notes": "PHP-07; sha256 from getcomposer.org; 2.11.3 fixes GHSA-374h-4mh9-7rpm (arbitrary code execution)"
+      }
+    ],
     "cacert": [
       {
         "version": "2026.11.5",

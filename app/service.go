@@ -23,6 +23,7 @@ import (
 	"github.com/ebur/ebur/core/install"
 	"github.com/ebur/ebur/core/paths"
 	"github.com/ebur/ebur/core/runtimes"
+	"github.com/ebur/ebur/core/shellenv"
 	"github.com/ebur/ebur/core/sites"
 	"github.com/ebur/ebur/core/supervisor"
 )
@@ -191,27 +192,9 @@ func openFolder(dir string) error {
 	return exec.Command("explorer.exe", dir).Start()
 }
 
-// OpenTerminal opens a console with Ebur's runtimes on PATH, without
-// touching the system PATH (GUI-04).
-func (a *App) OpenTerminal() error {
-	cfg, _ := config.Load(a.root.Config())
-	var dirs []string
-	add := func(rt, sub string) {
-		v := cfg.Active[rt]
-		if v == "" {
-			if inst, _ := runtimes.Installed(a.root, rt); len(inst) > 0 {
-				v = inst[0]
-			}
-		}
-		if v != "" {
-			dirs = append(dirs, filepath.Join(a.root.RuntimeDir(rt, v), sub))
-		}
-	}
-	add("php", "")
-	add("mariadb", "bin")
-	add("nginx", "")
-	return openConsole(a.root.WWW(), dirs, a.root.Dir())
-}
+// OpenTerminal opens a console with Ebur's runtimes and Composer on PATH,
+// without touching the system PATH (GUI-04, PHP-07).
+func (a *App) OpenTerminal() error { return shellenv.Open(a.root, a.root.WWW()) }
 
 // LogFile describes one file in logs\ (TOOL-02).
 type LogFile struct {

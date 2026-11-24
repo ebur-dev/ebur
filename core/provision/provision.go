@@ -50,6 +50,14 @@ func Prepare(ctx context.Context, root paths.Root, runtime, version string, say 
 		return Report{Steps: []string{"nginx runs"}}, nil
 	case "mariadb":
 		return prepareMariaDB(ctx, root, dir, version, say)
+	case "composer":
+		// A wrapper so `composer` works as a command. It uses whichever PHP
+		// is first on PATH, which in Ebur's terminal is the active one.
+		shim := "@echo off\r\nphp \"%~dp0composer.phar\" %*\r\n"
+		if err := fsutil.WriteFileAtomic(filepath.Join(dir, "composer.bat"), []byte(shim), 0o755); err != nil {
+			return Report{}, err
+		}
+		return Report{Steps: []string{"`composer` command available in Ebur's terminal"}}, nil
 	}
 	return Report{}, nil
 }

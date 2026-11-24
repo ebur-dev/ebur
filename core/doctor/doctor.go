@@ -69,6 +69,7 @@ func Run(root paths.Root, opt Options) []Check {
 		{"nginx", true, "ebur install nginx"},
 		{"mariadb", false, "ebur install mariadb"},
 		{"adminer", false, "ebur install adminer"},
+		{"composer", false, "ebur install composer"},
 	} {
 		c, v := checkRuntime(root, cfg, rt.name, rt.required, rt.install)
 		add(c)

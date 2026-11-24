@@ -79,6 +79,20 @@ func Runtime(ctx context.Context, root paths.Root, name, want string, progress r
 		}
 		res.Activated = true
 	}
+	// Composer comes with PHP (PHP-07). A failure here does not undo the
+	// PHP install; it is reported and `ebur install composer` retries.
+	if name == "php" {
+		if inst, _ := runtimes.Installed(root, "composer"); len(inst) == 0 {
+			if say != nil {
+				say("Installing Composer, which comes with PHP...")
+			}
+			if _, err := Runtime(ctx, root, "composer", "", nil, nil); err != nil {
+				res.Report.Warnings = append(res.Report.Warnings, "Composer was not installed: "+err.Error()+" (run `ebur install composer`)")
+			} else {
+				res.Report.Steps = append(res.Report.Steps, "Composer installed")
+			}
+		}
+	}
 	return res, nil
 }
 
