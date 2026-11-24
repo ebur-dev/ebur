@@ -3,6 +3,7 @@ package supervisor
 import (
 	"os/exec"
 	"sync"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -41,6 +42,53 @@ func joinKillOnCloseJob() error {
 		jobErr = windows.AssignProcessToJobObject(job, windows.CurrentProcess())
 	})
 	return jobErr
+}
+
+// killDescendants terminates every live process descended from pid that
+// was created at or after since. The creation-time check stops a reused
+// PID from matching an unrelated process. It returns how many it ended.
+func killDescendants(pid int, since time.Time) int {
+	snap, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
+	if err != nil {
+		return 0
+	}
+	defer windows.CloseHandle(snap)
+	children := map[uint32][]uint32{}
+	var e windows.ProcessEntry32
+	e.Size = uint32(unsafe.Sizeof(e))
+	for err = windows.Process32First(snap, &e); err == nil; err = windows.Process32Next(snap, &e) {
+		children[e.ParentProcessID] = append(children[e.ParentProcessID], e.ProcessID)
+	}
+	killed := 0
+	queue := []uint32{uint32(pid)}
+	seen := map[uint32]bool{uint32(pid): true}
+	for len(queue) > 0 {
+		parent := queue[0]
+		queue = queue[1:]
+		for _, c := range children[parent] {
+			if seen[c] {
+				continue
+			}
+			seen[c] = true
+			h, err := windows.OpenProcess(windows.PROCESS_TERMINATE|windows.PROCESS_QUERY_LIMITED_INFORMATION|windows.SYNCHRONIZE, false, c)
+			if err != nil {
+				continue
+			}
+			var created, exited, kernel, user windows.Filetime
+			if windows.GetProcessTimes(h, &created, &exited, &kernel, &user) == nil &&
+				!time.Unix(0, created.Nanoseconds()).Before(since) {
+				queue = append(queue, c) // its children go too
+				if windows.TerminateProcess(h, 1) == nil {
+					// TerminateProcess is asynchronous: wait until the
+					// process is gone so its ports are free for a restart.
+					windows.WaitForSingleObject(h, 3000)
+					killed++
+				}
+			}
+			windows.CloseHandle(h)
+		}
+	}
+	return killed
 }
 
 func hideWindow(cmd *exec.Cmd) {

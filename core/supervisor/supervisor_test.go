@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -20,6 +21,16 @@ func TestMain(m *testing.M) {
 		os.Exit(3)
 	case "sleep":
 		fmt.Println("ready")
+		time.Sleep(time.Minute)
+		os.Exit(0)
+	case "parent": // like an nginx master: starts a worker that outlives it
+		child := exec.Command(os.Args[0])
+		child.Env = append(os.Environ(), "EBUR_TEST_HELPER=sleep")
+		if err := child.Start(); err != nil {
+			fmt.Println("child start failed:", err)
+			os.Exit(1)
+		}
+		fmt.Printf("child=%d\n", child.Process.Pid)
 		time.Sleep(time.Minute)
 		os.Exit(0)
 	}

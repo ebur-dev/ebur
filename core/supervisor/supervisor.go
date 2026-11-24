@@ -198,6 +198,12 @@ func (s *Supervisor) watch(sv *service) {
 
 		started := time.Now()
 		waitErr := cmd.Wait()
+		// A service's children can outlive it: an nginx worker kept ports
+		// 80 and 443 after its master quit, blocking the next start. End
+		// any that are left, whether the service stopped or crashed.
+		if n := killDescendants(cmd.Process.Pid, started.Add(-2*time.Second)); n > 0 {
+			fmt.Fprintf(sv.tail, "ebur: ended %d leftover child process(es) of %s\n", n, sv.spec.Name)
+		}
 		if lf != nil {
 			lf.Close()
 		}

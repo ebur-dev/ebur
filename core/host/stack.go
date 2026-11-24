@@ -211,7 +211,10 @@ func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 		Dir:     nginxDir,
 		LogFile: filepath.Join(root.Logs(), "nginx-console.log"),
 		Stop: func(ctx context.Context, _ int) error {
-			cmd := exec.CommandContext(ctx, nginxExe, append(nginxArgs, "-s", "quit")...)
+			// Fast stop: a graceful "quit" waits for open connections (a
+			// browser's keep-alive, a slow request) and made restarts take
+			// 10 s; a local dev server has nothing to drain.
+			cmd := exec.CommandContext(ctx, nginxExe, append(nginxArgs, "-s", "stop")...)
 			cmd.Dir = nginxDir
 			proc.Hide(cmd)
 			return cmd.Run()
