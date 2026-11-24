@@ -41,4 +41,39 @@ func TestRender(t *testing.T) {
 	if strings.Contains(out, `\U`) {
 		t.Error("backslash path leaked into config")
 	}
+	if strings.Contains(out, "ssl") {
+		t.Error("TLS directives without TLS config")
+	}
+}
+
+func TestRenderTLS(t *testing.T) {
+	out := Render(Config{
+		NginxDir: `C:\e\bin\nginx`, LogDir: `C:\e\logs`, TempDir: `C:\e\tmp`, PIDFile: `C:\e\n.pid`,
+		Listen: "127.0.0.1:80", TLSListen: "127.0.0.1:443",
+		Sites: []sites.Site{
+			{Name: "shop", Host: "shop.test", DocRoot: `C:\e\www\shop`},
+			{Name: "plain", Host: "plain.test", DocRoot: `C:\e\www\plain`},
+		},
+		TLS:     map[string]TLSPair{"shop.test": {Cert: `C:\e\ssl\shop.pem`, Key: `C:\e\ssl\shop-key.pem`}},
+		CRLFile: `C:\e\ssl\ca.crl`, CRLPath: "/.well-known/ebur/ca.crl",
+		Pool: php.Pool{Version: "8.4.28", BasePort: 9100, Size: 1},
+	})
+	for _, want := range []string{
+		"listen 127.0.0.1:443 ssl default_server;",
+		"ssl_reject_handshake on;",
+		`ssl_certificate "C:/e/ssl/shop.pem";`,
+		"http2 on;",
+		"location = /.well-known/ebur/ca.crl {",
+		`alias "C:/e/ssl/ca.crl";`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Count(out, "listen 127.0.0.1:443 ssl;") != 1 {
+		t.Error("site without a certificate got a TLS listener")
+	}
+	if strings.Count(out, "{") != strings.Count(out, "}") {
+		t.Error("unbalanced braces")
+	}
 }

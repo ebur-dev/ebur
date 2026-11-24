@@ -41,6 +41,7 @@ type Info struct {
 	Nginx   string          `json:"nginx"`
 	Listen  string          `json:"listen"`
 	MariaDB string          `json:"mariadb,omitempty"`
+	HTTPS   bool            `json:"https,omitempty"`
 	Adminer string          `json:"adminer,omitempty"` // URL
 	Sites   []sites.Site    `json:"sites"`
 	Skipped []sites.Skipped `json:"skipped,omitempty"`

@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ebur/ebur/core/certs"
 	"github.com/ebur/ebur/core/config"
 	"github.com/ebur/ebur/core/paths"
 	"github.com/ebur/ebur/core/ports"
@@ -84,6 +85,9 @@ func Run(root paths.Root, opt Options) []Check {
 	}
 
 	wanted := []int{80, 9100}
+	if certs.Dir(root.SSL()).Exists() {
+		wanted = append(wanted, 443)
+	}
 	if active["mariadb"] != "" {
 		wanted = append(wanted, cfg.DBPort)
 	}
@@ -115,8 +119,28 @@ func Run(root paths.Root, opt Options) []Check {
 	} else {
 		add(Check{"Ebur host", Info, "not running", "Run `ebur start`."})
 	}
-	add(Check{"HTTPS", Info, "local HTTPS is not set up yet in this build (SSL-01)", ""})
+	add(checkHTTPS(root, cfg))
 	return out
+}
+
+func checkHTTPS(root paths.Root, cfg config.Settings) Check {
+	ca, err := certs.Dir(root.SSL()).LoadCA()
+	if errors.Is(err, certs.ErrNoCA) {
+		return Check{"HTTPS", Info, "not set up; sites are served over http:// only", "Run `ebur ssl install`."}
+	}
+	if err != nil {
+		return Check{"HTTPS", Fail, "local CA is damaged: " + err.Error(), "Run `ebur ssl uninstall`, then `ebur ssl install`."}
+	}
+	if !ca.Permits("site." + cfg.TLD) {
+		return Check{"HTTPS", Warn, fmt.Sprintf("the CA may only sign %s, but the TLD is .%s", strings.Join(ca.Cert.PermittedDNSDomains, ", "), cfg.TLD),
+			"Run `ebur ssl uninstall`, then `ebur ssl install` to make a CA for the current TLD."}
+	}
+	if trusted, err := ca.IsTrusted(); err != nil {
+		return Check{"HTTPS", Info, "cannot tell whether the CA is trusted: " + err.Error(), ""}
+	} else if !trusted {
+		return Check{"HTTPS", Warn, "the Ebur CA exists but Windows does not trust it, so browsers will warn", "Run `ebur ssl install` and click Yes."}
+	}
+	return Check{"HTTPS", OK, "Ebur CA trusted (SHA-256 " + ca.Fingerprint()[:16] + "...)", ""}
 }
 
 func checkWritable(root paths.Root) Check {

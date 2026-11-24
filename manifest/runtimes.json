@@ -67,6 +67,16 @@
         "notes": "LTS until 2028-06-04; sha256 from the MariaDB downloads API"
       }
     ],
+    "cacert": [
+      {
+        "version": "2026.11.5",
+        "url": "https://curl.se/ca/cacert-2026-11-05.pem",
+        "sha256": "427c064216761a1e72a8b30f0d954d08cb6e4435a82091fb865afd20c8497285",
+        "file": "cacert.pem",
+        "arch": "x64",
+        "notes": "Mozilla root certificates as published by curl; PHP trusts these plus the Ebur CA (SSL-04)"
+      }
+    ],
     "adminer": [
       {
         "version": "6.3.1",

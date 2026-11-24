@@ -222,11 +222,15 @@ func printStatus(st host.Status) {
 	w.Flush()
 	if st.Summary != "none" {
 		fmt.Println()
+		scheme := "http"
+		if st.Info.HTTPS {
+			scheme = "https"
+		}
 		for _, s := range st.Info.Sites {
-			fmt.Printf("  http://%s  ->  %s\n", s.Host, s.DocRoot)
+			fmt.Printf("  %s://%s  ->  %s\n", scheme, s.Host, s.DocRoot)
 		}
 		if st.Info.Adminer != "" {
-			fmt.Printf("  %s  ->  Adminer (credentials: ebur db)\n", st.Info.Adminer)
+			fmt.Printf("  %s  ->  Adminer (credentials: ebur db)\n", strings.Replace(st.Info.Adminer, "http:", scheme+":", 1))
 		}
 	}
 	for _, s := range st.Info.Skipped {

@@ -21,7 +21,16 @@ type Config struct {
 	Listen   string // e.g. "127.0.0.1:80" (NFR-07: loopback by default)
 	Sites    []sites.Site
 	Pool     php.Pool // PHP pool every site uses (per-site pools come with PHP-04)
+
+	// HTTPS (SSL-02). Empty TLSListen means HTTP only.
+	TLSListen string             // e.g. "127.0.0.1:443"
+	TLS       map[string]TLSPair // host -> certificate files
+	CRLFile   string             // served at certs.CRLPath on the default server
+	CRLPath   string
 }
+
+// TLSPair is a certificate chain and its key.
+type TLSPair struct{ Cert, Key string }
 
 func q(path string) string {
 	return `"` + strings.ReplaceAll(filepath.ToSlash(path), `"`, `\"`) + `"`
@@ -61,22 +70,41 @@ http {
 		b.WriteString("    " + line + "\n")
 	}
 
+	tlsDefault := ""
+	if c.TLSListen != "" {
+		// Unknown names over HTTPS are refused at the handshake instead of
+		// being shown another site's certificate.
+		tlsDefault = fmt.Sprintf("        listen %s ssl default_server;\n        ssl_reject_handshake on;\n", c.TLSListen)
+	}
+	crl := ""
+	if c.CRLFile != "" {
+		// Schannel (curl.exe) needs a reachable CRL for local certificates.
+		crl = fmt.Sprintf("\n        location = %s {\n            alias %s;\n            default_type application/pkix-crl;\n        }\n", c.CRLPath, q(c.CRLFile))
+	}
 	fmt.Fprintf(&b, `
     # Unknown host names get a clear message instead of a random site.
     server {
         listen %s default_server;
-        server_name _;
+%s        server_name _;
         default_type text/plain;
-        return 404 "Ebur: no site matches this host name. Create a folder in www\\ named after it.\n";
+%s
+        location / {
+            return 404 "Ebur: no site matches this host name. Create a folder in www\\ named after it.\n";
+        }
     }
-`, c.Listen)
+`, c.Listen, tlsDefault, crl)
 
 	params := q(filepath.Join(c.NginxDir, "conf", "fastcgi_params"))
 	for _, s := range c.Sites {
+		tls := ""
+		if pair, ok := c.TLS[s.Host]; ok && c.TLSListen != "" {
+			tls = fmt.Sprintf("        listen %s ssl;\n        http2 on;\n        ssl_certificate %s;\n        ssl_certificate_key %s;\n",
+				c.TLSListen, q(pair.Cert), q(pair.Key))
+		}
 		fmt.Fprintf(&b, `
     server {
         listen %s;
-        server_name %s;
+%s        server_name %s;
         root %s;
         index index.php index.html index.htm;
         charset utf-8;
@@ -96,7 +124,7 @@ http {
 
         location ~ /\.(?!well-known) { deny all; }
     }
-`, c.Listen, s.Host, q(s.DocRoot), params, upstream)
+`, c.Listen, tls, s.Host, q(s.DocRoot), params, upstream)
 	}
 	b.WriteString("}\n")
 	return b.String()

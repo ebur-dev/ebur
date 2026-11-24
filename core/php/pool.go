@@ -28,6 +28,9 @@ type Pool struct {
 	Size        int
 	MaxRequests int    // base limit; 0 means DefaultMaxRequests
 	LogDir      string // where worker logs go; empty disables logs
+	// ScanDir holds extra .ini files Ebur manages (e.g. the CA bundle for
+	// SSL-04), so the user's php.ini is never rewritten.
+	ScanDir string
 }
 
 // Name is the service and upstream name for the pool, e.g. "php-8.4.28".
@@ -76,6 +79,9 @@ func (p Pool) Specs() ([]supervisor.Spec, error) {
 		}
 		if p.LogDir != "" {
 			s.LogFile = filepath.Join(p.LogDir, p.Name()+".log")
+		}
+		if p.ScanDir != "" {
+			s.Env = append(s.Env, "PHP_INI_SCAN_DIR="+p.ScanDir)
 		}
 		specs = append(specs, s)
 	}
