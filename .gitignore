@@ -1,0 +1,11 @@
+# Build output
+*.exe
+
+# Downloaded runtimes and generated spike state
+spikes/runtimes/
+spikes/*/work/
+
+# Local CA and site keys must never be committed
+spikes/https/ssl/
+*.pem
+*-key.pem
