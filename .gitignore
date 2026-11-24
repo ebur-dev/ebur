@@ -1,6 +1,9 @@
 # Build output
 *.exe
 
+# Local development root (EBUR_ROOT=.devroot)
+.devroot/
+
 # Downloaded runtimes and generated spike state
 spikes/runtimes/
 spikes/*/work/

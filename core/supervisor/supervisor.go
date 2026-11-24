@@ -120,6 +120,18 @@ func (s *Supervisor) Add(spec Spec) error {
 	return nil
 }
 
+// Clear forgets every stopped or failed service, so a new set of specs
+// can be added (e.g. after a PHP version switch). Running services stay.
+func (s *Supervisor) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for n, sv := range s.svcs {
+		if sv.state == Stopped || sv.state == Failed {
+			delete(s.svcs, n)
+		}
+	}
+}
+
 // Start launches a service. Starting a running service does nothing.
 // An error is returned if the first launch fails (e.g. missing binary).
 func (s *Supervisor) Start(name string) error {

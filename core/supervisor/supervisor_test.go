@@ -145,6 +145,13 @@ func TestStartStop(t *testing.T) {
 	if len(s.All()) != 2 {
 		t.Fatal("All() lost services")
 	}
+	s.Start("web")
+	waitState(t, s, "web", Running)
+	s.Clear()
+	if all := s.All(); len(all) != 1 || all[0].Name != "web" {
+		t.Fatalf("Clear removed a running service or kept a stopped one: %+v", all)
+	}
+	s.StopAll(ctx)
 }
 
 func TestGracefulStopFallsBackToKill(t *testing.T) {
