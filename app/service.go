@@ -1,0 +1,378 @@
+package main
+
+import (
+	"bufio"
+	"context"
+	"errors"
+	"fmt"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
+
+	"github.com/ebur/ebur/core/certs"
+	"github.com/ebur/ebur/core/config"
+	"github.com/ebur/ebur/core/doctor"
+	"github.com/ebur/ebur/core/host"
+	"github.com/ebur/ebur/core/install"
+	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur/ebur/core/runtimes"
+	"github.com/ebur/ebur/core/sites"
+	"github.com/ebur/ebur/core/supervisor"
+)
+
+// App is bound to the frontend: every exported method can be called from
+// JavaScript as "main.App.<Method>". Errors carry a next step (NFR-14).
+type App struct {
+	root    paths.Root
+	b       *backend
+	app     *application.App
+	changed func() // refreshes the tray after an action
+}
+
+func withHint(err error) error {
+	if err == nil {
+		return nil
+	}
+	var he interface{ Hint() string }
+	if errors.As(err, &he) && he.Hint() != "" {
+		return fmt.Errorf("%s\nNext step: %s", err.Error(), he.Hint())
+	}
+	return err
+}
+
+func (a *App) after(err error) error {
+	if a.changed != nil {
+		go a.changed()
+	}
+	return withHint(err)
+}
+
+// Overview is everything the main window shows at a glance.
+type Overview struct {
+	Status       host.Status     `json:"status"`
+	Sites        []SiteRow       `json:"sites"`
+	Skipped      []sites.Skipped `json:"skipped"`
+	PHPActive    string          `json:"phpActive"`
+	PHPInstalled []string        `json:"phpInstalled"`
+	HTTPS        bool            `json:"https"`
+	Adminer      bool            `json:"adminer"`
+	TLD          string          `json:"tld"`
+	Root         string          `json:"root"`
+	Version      string          `json:"version"`
+}
+
+// SiteRow is a site as the Sites tab and tray menu show it (GUI-03).
+type SiteRow struct {
+	Name    string `json:"name"`
+	URL     string `json:"url"`
+	DocRoot string `json:"docRoot"`
+	PHP     string `json:"php"`
+	Running bool   `json:"running"`
+}
+
+func (a *App) Overview() (Overview, error) {
+	cfg, err := config.Load(a.root.Config())
+	if err != nil {
+		return Overview{}, withHint(err)
+	}
+	var st host.Status
+	if err := a.b.call("status", nil, &st); err != nil {
+		st = host.Status{Summary: "none"}
+	}
+	ov := Overview{Status: st, TLD: cfg.TLD, Root: a.root.Dir(), Version: version}
+	ov.PHPInstalled, _ = runtimes.Installed(a.root, "php")
+	ov.PHPActive = cfg.Active["php"]
+	if ov.PHPActive == "" && len(ov.PHPInstalled) > 0 {
+		ov.PHPActive = ov.PHPInstalled[0]
+	}
+	if st.Info.PHP != "" {
+		ov.PHPActive = st.Info.PHP
+	}
+	ov.HTTPS = certs.Dir(a.root.SSL()).Exists()
+	adminer, _ := runtimes.Installed(a.root, "adminer")
+	ov.Adminer = len(adminer) > 0
+	scheme := "http"
+	if ov.HTTPS {
+		scheme = "https"
+	}
+	found, skipped, _ := sites.Scan(a.root.WWW(), cfg.TLD)
+	ov.Skipped = skipped
+	nginxUp := false
+	for _, s := range st.Services {
+		if s.Name == "nginx" && s.State == "running" {
+			nginxUp = true
+		}
+	}
+	for _, s := range found {
+		if s.Name == "db" {
+			continue
+		}
+		ov.Sites = append(ov.Sites, SiteRow{Name: s.Name, URL: scheme + "://" + s.Host, DocRoot: s.DocRoot, PHP: ov.PHPActive, Running: nginxUp})
+	}
+	// Empty lists, not null, so the page can iterate without checks.
+	if ov.Skipped == nil {
+		ov.Skipped = []sites.Skipped{}
+	}
+	if ov.Sites == nil {
+		ov.Sites = []SiteRow{}
+	}
+	if ov.PHPInstalled == nil {
+		ov.PHPInstalled = []string{}
+	}
+	if ov.Status.Services == nil {
+		ov.Status.Services = []supervisor.Status{}
+	}
+	return ov, nil
+}
+
+func (a *App) Start() (host.Status, error) {
+	var st host.Status
+	return st, a.after(a.b.call("start", host.Selection{}, &st))
+}
+
+func (a *App) Stop() (host.Status, error) {
+	var st host.Status
+	return st, a.after(a.b.call("stop", host.Selection{}, &st))
+}
+
+func (a *App) Restart() (host.Status, error) {
+	var st host.Status
+	return st, a.after(a.b.call("restart", host.Selection{}, &st))
+}
+
+// StartService and StopService take a group name such as "nginx" or "php".
+func (a *App) StartService(name string) (host.Status, error) {
+	var st host.Status
+	return st, a.after(a.b.call("start", host.Selection{Services: []string{name}}, &st))
+}
+
+func (a *App) StopService(name string) (host.Status, error) {
+	var st host.Status
+	return st, a.after(a.b.call("stop", host.Selection{Services: []string{name}}, &st))
+}
+
+// SetPHP switches the active PHP version (PHP-01, PHP-02).
+func (a *App) SetPHP(version string) (host.Status, error) {
+	var st host.Status
+	return st, a.after(a.b.call("set-active", host.SetActive{Runtime: "php", Version: version}, &st))
+}
+
+// OpenURL opens a local site in the default browser. Only http(s) URLs for
+// local names are allowed, so the page cannot open arbitrary programs.
+func (a *App) OpenURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return fmt.Errorf("not a web address: %q", raw)
+	}
+	cfg, _ := config.Load(a.root.Config())
+	h := u.Hostname()
+	if !strings.HasSuffix(h, "."+cfg.TLD) && h != "localhost" && h != "127.0.0.1" {
+		return fmt.Errorf("only local sites can be opened from Ebur: %q", h)
+	}
+	return a.app.Browser.OpenURL(u.String())
+}
+
+func (a *App) OpenWWW() error  { return openFolder(a.root.WWW()) }
+func (a *App) OpenLogs() error { return openFolder(a.root.Logs()) }
+
+func openFolder(dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	return exec.Command("explorer.exe", dir).Start()
+}
+
+// OpenTerminal opens a console with Ebur's runtimes on PATH, without
+// touching the system PATH (GUI-04).
+func (a *App) OpenTerminal() error {
+	cfg, _ := config.Load(a.root.Config())
+	var dirs []string
+	add := func(rt, sub string) {
+		v := cfg.Active[rt]
+		if v == "" {
+			if inst, _ := runtimes.Installed(a.root, rt); len(inst) > 0 {
+				v = inst[0]
+			}
+		}
+		if v != "" {
+			dirs = append(dirs, filepath.Join(a.root.RuntimeDir(rt, v), sub))
+		}
+	}
+	add("php", "")
+	add("mariadb", "bin")
+	add("nginx", "")
+	return openConsole(a.root.WWW(), dirs, a.root.Dir())
+}
+
+// LogFile describes one file in logs\ (TOOL-02).
+type LogFile struct {
+	Name     string `json:"name"`
+	Size     int64  `json:"size"`
+	Modified string `json:"modified"`
+}
+
+var logNameRe = regexp.MustCompile(`^[A-Za-z0-9._-]+\.log$`)
+
+func (a *App) Logs() ([]LogFile, error) {
+	entries, err := os.ReadDir(a.root.Logs())
+	if err != nil {
+		return []LogFile{}, nil
+	}
+	out := []LogFile{}
+	for _, e := range entries {
+		if e.IsDir() || !logNameRe.MatchString(e.Name()) {
+			continue
+		}
+		fi, err := e.Info()
+		if err != nil {
+			continue
+		}
+		out = append(out, LogFile{Name: e.Name(), Size: fi.Size(), Modified: fi.ModTime().Format(time.RFC3339)})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Modified > out[j].Modified })
+	return out, nil
+}
+
+// ReadLog returns up to the last n lines of a file in logs\. The name is
+// checked so the page can only read Ebur's own logs.
+func (a *App) ReadLog(name string, n int) ([]string, error) {
+	if !logNameRe.MatchString(name) {
+		return nil, fmt.Errorf("invalid log name %q", name)
+	}
+	if n <= 0 || n > 2000 {
+		n = 300
+	}
+	f, err := os.Open(filepath.Join(a.root.Logs(), name))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	const maxRead = 2 << 20 // last 2 MB is plenty for a tail
+	if fi, err := f.Stat(); err == nil && fi.Size() > maxRead {
+		f.Seek(fi.Size()-maxRead, 0)
+	}
+	ring := make([]string, 0, n)
+	sc := bufio.NewScanner(f)
+	sc.Buffer(make([]byte, 64*1024), 1<<20)
+	for sc.Scan() {
+		if len(ring) == n {
+			ring = ring[1:]
+		}
+		ring = append(ring, sc.Text())
+	}
+	return ring, nil
+}
+
+func (a *App) Doctor() []doctor.Check {
+	running := a.b.call("ping", nil, nil) == nil
+	return doctor.Run(a.root, doctor.Options{HostRunning: running})
+}
+
+// DBInfo is what the Database panel shows.
+type DBInfo struct {
+	Installed bool   `json:"installed"`
+	Version   string `json:"version"`
+	Port      int    `json:"port"`
+	User      string `json:"user"`
+	Password  string `json:"password"`
+	Adminer   string `json:"adminer"`
+}
+
+func (a *App) Database() DBInfo {
+	cfg, _ := config.Load(a.root.Config())
+	inst, _ := runtimes.Installed(a.root, "mariadb")
+	info := DBInfo{Installed: len(inst) > 0, Port: cfg.DBPort, User: "root", Password: cfg.DBRootPassword}
+	if info.Installed {
+		info.Version = cfg.Active["mariadb"]
+		if info.Version == "" {
+			info.Version = inst[0]
+		}
+	}
+	if ad, _ := runtimes.Installed(a.root, "adminer"); len(ad) > 0 {
+		scheme := "http"
+		if certs.Dir(a.root.SSL()).Exists() {
+			scheme = "https"
+		}
+		info.Adminer = scheme + "://db." + cfg.TLD
+	}
+	return info
+}
+
+// SSLInfo is what the HTTPS panel shows.
+type SSLInfo struct {
+	Exists      bool   `json:"exists"`
+	Trusted     bool   `json:"trusted"`
+	Name        string `json:"name"`
+	Fingerprint string `json:"fingerprint"`
+	ValidTo     string `json:"validTo"`
+}
+
+func (a *App) SSL() SSLInfo {
+	ca, err := certs.Dir(a.root.SSL()).LoadCA()
+	if err != nil {
+		return SSLInfo{}
+	}
+	trusted, _ := ca.IsTrusted()
+	return SSLInfo{Exists: true, Trusted: trusted, Name: ca.Cert.Subject.CommonName,
+		Fingerprint: ca.Fingerprint(), ValidTo: ca.Cert.NotAfter.Format("2006-01-02")}
+}
+
+// EnableHTTPS creates and trusts the local CA (SSL-01). Windows shows its
+// own confirmation dialog; that is the user's consent.
+func (a *App) EnableHTTPS() (SSLInfo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	install.Runtime(ctx, a.root, "cacert", "", nil, nil) // public roots for PHP; best effort
+	cfg, err := config.Load(a.root.Config())
+	if err != nil {
+		return SSLInfo{}, withHint(err)
+	}
+	dir := certs.Dir(a.root.SSL())
+	ca, err := dir.LoadCA()
+	if errors.Is(err, certs.ErrNoCA) {
+		ca, err = dir.CreateCA(cfg.TLD)
+	}
+	if err != nil {
+		return SSLInfo{}, withHint(err)
+	}
+	if err := ca.Trust(); err != nil {
+		if errors.Is(err, certs.ErrDeclined) {
+			return a.SSL(), errors.New("HTTPS was not enabled because the Windows dialog was declined.\nNext step: click Enable HTTPS again and choose Yes.")
+		}
+		return a.SSL(), err
+	}
+	a.restartIfRunning()
+	return a.SSL(), a.after(nil)
+}
+
+// DisableHTTPS removes the CA from Windows and deletes Ebur's certificates (SSL-03).
+func (a *App) DisableHTTPS() (SSLInfo, error) {
+	dir := certs.Dir(a.root.SSL())
+	if ca, err := dir.LoadCA(); err == nil {
+		if err := ca.Untrust(); err != nil {
+			if errors.Is(err, certs.ErrDeclined) {
+				return a.SSL(), errors.New("HTTPS is still enabled because the Windows dialog was declined.")
+			}
+			return a.SSL(), err
+		}
+	}
+	if err := dir.Remove(); err != nil {
+		return a.SSL(), err
+	}
+	a.restartIfRunning()
+	return a.SSL(), a.after(nil)
+}
+
+func (a *App) restartIfRunning() {
+	var st host.Status
+	if a.b.call("status", nil, &st) == nil && st.Summary != "none" {
+		a.b.call("restart", host.Selection{}, &st)
+	}
+}

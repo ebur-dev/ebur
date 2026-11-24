@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	goruntime "runtime"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -14,46 +13,26 @@ import (
 
 	"github.com/ebur/ebur/core/config"
 	"github.com/ebur/ebur/core/host"
-	"github.com/ebur/ebur/core/manifest"
+	"github.com/ebur/ebur/core/install"
 	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/core/provision"
 	"github.com/ebur/ebur/core/runtimes"
 	"github.com/ebur/ebur/core/sites"
-	manifestdata "github.com/ebur/ebur/manifest"
 )
 
-func loadManifest() (*manifest.Manifest, error) { return manifest.Parse(manifestdata.JSON) }
-
-// arch maps GOARCH to manifest arch. Official PHP and MariaDB builds are
-// x64 only, so ARM64 falls back to x64 under emulation (SRS §2.3).
-func resolve(m *manifest.Manifest, name, want string) (manifest.Release, error) {
-	if goruntime.GOARCH == "arm64" {
-		if rel, err := m.Resolve(name, want, "arm64"); err == nil {
-			return rel, nil
-		}
-	}
-	return m.Resolve(name, want, "x64")
-}
-
+// installRuntime runs the shared install flow (core/install) and prints
+// progress.
 func installRuntime(root paths.Root, name, want string) error {
-	m, err := loadManifest()
-	if err != nil {
-		return err
-	}
-	rel, err := resolve(m, name, want)
-	if err != nil {
-		return &hintErr{err.Error(), fmt.Sprintf("Run `ebur %s list` to see available versions.", cmdFor(name))}
-	}
-	if v, _ := runtimes.Installed(root, name); contains(v, rel.Version) {
-		fmt.Printf("%s %s is already installed.\n", name, rel.Version)
-	} else {
-		ctx, cancel := signalContext()
-		defer cancel()
-		fmt.Printf("Downloading %s %s ...\n", name, rel.Version)
-		t0 := time.Now()
-		last := -1
-		in := &runtimes.Installer{Root: root}
-		_, err := in.Install(ctx, name, rel, func(done, total int64) {
+	ctx, cancel := signalContext()
+	defer cancel()
+	t0 := time.Now()
+	last := -1
+	downloading := false
+	res, err := install.Runtime(ctx, root, name, want,
+		func(done, total int64) {
+			if !downloading {
+				downloading = true
+				fmt.Printf("Downloading %s ...\n", name)
+			}
 			if total <= 0 {
 				return
 			}
@@ -61,39 +40,38 @@ func installRuntime(root paths.Root, name, want string) error {
 				last = pct
 				fmt.Printf("\r  %3d%%  %.1f / %.1f MB", pct, float64(done)/(1<<20), float64(total)/(1<<20))
 			}
-		})
-		fmt.Println()
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return errors.New("download cancelled; nothing was installed")
+		},
+		func(s string) {
+			if downloading {
+				fmt.Println()
+				downloading = false
 			}
-			return err
-		}
-		fmt.Printf("Installed %s %s (checksum verified) in %v\n", name, rel.Version, time.Since(t0).Round(100*time.Millisecond))
+			fmt.Println(s)
+		})
+	if downloading {
+		fmt.Println()
 	}
-	ctx, cancel := signalContext()
-	defer cancel()
-	t0 := time.Now()
-	rep, err := provision.Prepare(ctx, root, name, rel.Version, func(s string) { fmt.Println(s) })
-	if err != nil {
-		return &hintErr{err.Error(), "Run `ebur doctor` for details. Reinstall with `ebur " + cmdFor(name) + " remove` if the files are damaged."}
+	switch {
+	case errors.Is(err, context.Canceled):
+		return errors.New("cancelled; nothing was installed")
+	case err != nil && res.Version == "":
+		return &hintErr{err.Error(), fmt.Sprintf("Run `ebur %s list` to see available versions.", cmdFor(name))}
+	case err != nil:
+		return &hintErr{err.Error(), "Run `ebur doctor` for details."}
 	}
-	if len(rep.Steps) > 0 {
-		fmt.Printf("Ready in %v: %s\n", time.Since(t0).Round(100*time.Millisecond), strings.Join(rep.Steps, "; "))
+	if res.Downloaded {
+		fmt.Printf("Installed %s %s (checksum verified).\n", name, res.Version)
+	} else {
+		fmt.Printf("%s %s is already installed.\n", name, res.Version)
 	}
-	for _, w := range rep.Warnings {
+	if len(res.Report.Steps) > 0 {
+		fmt.Printf("Ready in %v: %s\n", time.Since(t0).Round(100*time.Millisecond), strings.Join(res.Report.Steps, "; "))
+	}
+	for _, w := range res.Report.Warnings {
 		fmt.Println("warning:", w)
 	}
-	cfg, err := config.Load(root.Config())
-	if err != nil {
-		return err
-	}
-	if cfg.Active[name] == "" {
-		cfg.Active[name] = rel.Version
-		if err := config.Save(root.Config(), cfg); err != nil {
-			return err
-		}
-		fmt.Printf("%s %s is now the active version.\n", name, rel.Version)
+	if res.Activated {
+		fmt.Printf("%s %s is now the active version.\n", name, res.Version)
 	}
 	return nil
 }
@@ -268,7 +246,7 @@ func orNone(s string) string {
 }
 
 func listRuntime(root paths.Root, name string) error {
-	m, err := loadManifest()
+	m, err := install.Manifest()
 	if err != nil {
 		return err
 	}

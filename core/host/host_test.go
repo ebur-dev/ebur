@@ -87,6 +87,32 @@ func TestStartStopRestart(t *testing.T) {
 	}
 }
 
+func TestSetActive(t *testing.T) {
+	h, builds := fakeHost(t, normal)
+	for _, v := range []string{"8.3.37", "8.4.9", "8.4.28"} {
+		os.MkdirAll(h.Root.RuntimeDir("php", v), 0o755)
+	}
+	if _, err := h.SetActive(SetActive{Runtime: "php", Version: "8.4"}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _ := config.Load(h.Root.Config())
+	if cfg.Active["php"] != "8.4.28" {
+		t.Fatalf("prefix resolved to %q", cfg.Active["php"])
+	}
+	if builds.Load() != 0 {
+		t.Fatal("restarted while nothing was running")
+	}
+	h.Start(Selection{})
+	st, err := h.SetActive(SetActive{Runtime: "php", Version: "8.3"})
+	if err != nil || st.Info.PHP != "8.3.37" || builds.Load() != 2 {
+		t.Fatalf("running switch: err=%v php=%s builds=%d", err, st.Info.PHP, builds.Load())
+	}
+	var he interface{ Hint() string }
+	if _, err := h.SetActive(SetActive{Runtime: "php", Version: "7.4"}); !errors.As(err, &he) {
+		t.Fatalf("missing version: %v", err)
+	}
+}
+
 func TestInstantCrashIsReported(t *testing.T) {
 	h, _ := fakeHost(t, func(config.Settings) []supervisor.Spec {
 		return []supervisor.Spec{spec("nginx", "sleep"), spec("php-8.4.28#1", "crash")}

@@ -21,6 +21,7 @@ import (
 	"github.com/ebur/ebur/core/ipc"
 	"github.com/ebur/ebur/core/paths"
 	"github.com/ebur/ebur/core/ports"
+	"github.com/ebur/ebur/core/runtimes"
 	"github.com/ebur/ebur/core/sites"
 	"github.com/ebur/ebur/core/supervisor"
 )
@@ -156,6 +157,12 @@ func (h *Host) Handle(_ context.Context, method string, params json.RawMessage) 
 		return h.Stop(sel)
 	case "restart":
 		return h.Restart(sel)
+	case "set-active":
+		var p SetActive
+		if err := json.Unmarshal(params, &p); err != nil {
+			return nil, fmt.Errorf("bad params: %w", err)
+		}
+		return h.SetActive(p)
 	case "shutdown":
 		h.once.Do(func() {
 			// Reply first, then quit.
@@ -347,6 +354,48 @@ func (h *Host) Restart(sel Selection) (Status, error) {
 		return h.Status(), err
 	}
 	return h.Start(sel)
+}
+
+// SetActive picks the active version of a runtime, e.g. PHP from the tray
+// menu (PHP-01). Version may be a prefix such as "8.4"; the newest
+// installed match wins. Running services restart on it (PHP-02).
+type SetActive struct {
+	Runtime string `json:"runtime"`
+	Version string `json:"version"`
+}
+
+func (h *Host) SetActive(p SetActive) (Status, error) {
+	installed, err := runtimes.Installed(h.Root, p.Runtime)
+	if err != nil {
+		return h.Status(), err
+	}
+	var match string
+	for _, v := range installed { // newest first
+		if v == p.Version || strings.HasPrefix(v, p.Version+".") {
+			match = v
+			break
+		}
+	}
+	if match == "" {
+		return h.Status(), &hinted{
+			fmt.Sprintf("%s %s is not installed (installed: %s)", p.Runtime, p.Version, strings.Join(installed, ", ")),
+			fmt.Sprintf("Install it first, e.g. `ebur install %s %s`.", p.Runtime, p.Version),
+		}
+	}
+	cfg, err := config.Load(h.Root.Config())
+	if err != nil {
+		return h.Status(), err
+	}
+	if cfg.Active[p.Runtime] != match {
+		cfg.Active[p.Runtime] = match
+		if err := config.Save(h.Root.Config(), cfg); err != nil {
+			return h.Status(), err
+		}
+	}
+	if h.anyRunning() {
+		return h.Restart(Selection{})
+	}
+	return h.Status(), nil
 }
 
 func (h *Host) statusLocked() Status {

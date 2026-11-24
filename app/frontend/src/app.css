@@ -1,0 +1,85 @@
+/* Ebur palette (SRS §4.5): warm ivory, elephant grey, one gold accent. */
+:root {
+  --ivory: #f6f1e4;
+  --ink: #2b2f33;
+  --gold: #d89b2b;
+  --green: #3e9b5f;
+  --red: #b8452f;
+  --grey: #8a8f94;
+
+  --bg: var(--ivory);
+  --surface: #fffcf5;
+  --surface-2: #efe8d6;
+  --text: var(--ink);
+  --muted: #5d636a;
+  --border: #ddd4bf;
+  --accent: var(--gold);
+  --accent-text: #2b2f33;
+
+  --font-ui: Inter, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, ui-monospace, monospace;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1f2225;
+    --surface: #2b2f33;
+    --surface-2: #343a3f;
+    --text: #f6f1e4;
+    --muted: #b5b0a3;
+    --border: #41474d;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+#app { height: 100%; }
+
+button {
+  font: inherit;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.55; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+button.link { border: none; background: none; padding: 0; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+select {
+  font: inherit;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+code, pre, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.muted { color: var(--muted); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: var(--grey); }
+.dot.running, .dot.all, .dot.ok { background: var(--green); }
+.dot.some, .dot.restarting, .dot.warn { background: var(--gold); }
+.dot.failed, .dot.fail { background: var(--red); }
