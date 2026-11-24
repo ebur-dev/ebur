@@ -16,6 +16,7 @@ import (
 	"github.com/ebur/ebur/core/host"
 	"github.com/ebur/ebur/core/manifest"
 	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur/ebur/core/provision"
 	"github.com/ebur/ebur/core/runtimes"
 	"github.com/ebur/ebur/core/sites"
 	manifestdata "github.com/ebur/ebur/manifest"
@@ -70,6 +71,19 @@ func installRuntime(root paths.Root, name, want string) error {
 		}
 		fmt.Printf("Installed %s %s (checksum verified) in %v\n", name, rel.Version, time.Since(t0).Round(100*time.Millisecond))
 	}
+	ctx, cancel := signalContext()
+	defer cancel()
+	t0 := time.Now()
+	rep, err := provision.Prepare(ctx, root, name, rel.Version, func(s string) { fmt.Println(s) })
+	if err != nil {
+		return &hintErr{err.Error(), "Run `ebur doctor` for details. Reinstall with `ebur " + cmdFor(name) + " remove` if the files are damaged."}
+	}
+	if len(rep.Steps) > 0 {
+		fmt.Printf("Ready in %v: %s\n", time.Since(t0).Round(100*time.Millisecond), strings.Join(rep.Steps, "; "))
+	}
+	for _, w := range rep.Warnings {
+		fmt.Println("warning:", w)
+	}
 	cfg, err := config.Load(root.Config())
 	if err != nil {
 		return err
@@ -103,8 +117,8 @@ func contains(list []string, s string) bool {
 func installCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "install <runtime> [version]",
-		Short:   "Install a runtime (php, nginx) from the manifest",
-		Example: "  ebur install nginx\n  ebur install php 8.3",
+		Short:   "Install a runtime (php, nginx, mariadb, adminer) from the manifest",
+		Example: "  ebur install nginx\n  ebur install php 8.3\n  ebur install mariadb\n  ebur install adminer",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := findRoot()

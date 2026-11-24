@@ -114,6 +114,18 @@ func TestRootStripped(t *testing.T) {
 	}
 }
 
+func TestSingleFile(t *testing.T) {
+	body := []byte("<?php // adminer")
+	in, url := setup(t, body)
+	dir, err := in.Install(context.Background(), "adminer", manifest.Release{Version: "6.3.1", URL: url + "/a.php", SHA256: sum(body), File: "adminer.php"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "adminer.php")); string(b) != string(body) {
+		t.Fatal("file not placed")
+	}
+}
+
 func TestRootMissing(t *testing.T) {
 	z := makeZip(t, map[string]string{"x/a": "a"})
 	in, url := setup(t, z)

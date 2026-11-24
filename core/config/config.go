@@ -28,6 +28,12 @@ type Settings struct {
 	TLD string `json:"tld"`
 	// ManifestURL is where the runtime manifest is fetched from.
 	ManifestURL string `json:"manifest_url,omitempty"`
+	// DBPort is the MariaDB port. Change it when another server (e.g.
+	// Laragon's MySQL) already uses 3306.
+	DBPort int `json:"db_port"`
+	// DBRootPassword is generated when the first database is set up
+	// (NFR-09: never blank). Local-only; shown by `ebur db`.
+	DBRootPassword string `json:"db_root_password,omitempty"`
 }
 
 // Defaults returns the settings used for a fresh install.
@@ -37,6 +43,7 @@ func Defaults() Settings {
 		WebServer:   "nginx",
 		PHPPoolSize: 4,
 		TLD:         "test",
+		DBPort:      3306,
 	}
 }
 
@@ -54,6 +61,9 @@ func (s *Settings) fillDefaults() {
 	if s.TLD == "" {
 		s.TLD = d.TLD
 	}
+	if s.DBPort == 0 {
+		s.DBPort = d.DBPort
+	}
 }
 
 // Validate reports settings Ebur cannot run with.
@@ -65,6 +75,9 @@ func (s Settings) Validate() error {
 	}
 	if s.PHPPoolSize > 64 {
 		return fmt.Errorf("config: php_pool_size %d is too large (max 64)", s.PHPPoolSize)
+	}
+	if s.DBPort < 1024 || s.DBPort > 65535 {
+		return fmt.Errorf("config: db_port %d must be between 1024 and 65535", s.DBPort)
 	}
 	return nil
 }

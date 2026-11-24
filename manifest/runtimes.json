@@ -4,6 +4,20 @@
   "runtimes": {
     "php": [
       {
+        "version": "8.6.0",
+        "url": "https://windows.php.net/downloads/releases/php-8.6.0-nts-Win32-vs18-x64.zip",
+        "sha256": "d4783fffe1f4ab072600daff1622a7a2df936957a787a338c59e3dbd4d846d98",
+        "arch": "x64",
+        "notes": "nts-vs18"
+      },
+      {
+        "version": "8.5.13",
+        "url": "https://windows.php.net/downloads/releases/php-8.5.13-nts-Win32-vs17-x64.zip",
+        "sha256": "4ae6c72bc0ca4f6b8f3e9b107874bae0135699f3aabe6c26a1f6103d040eea97",
+        "arch": "x64",
+        "notes": "nts-vs17"
+      },
+      {
         "version": "8.4.28",
         "url": "https://windows.php.net/downloads/releases/php-8.4.28-nts-Win32-vs17-x64.zip",
         "sha256": "c1f9280588b7b6ad7b518969022f0b0175f106fab9d0639ad0e4ce7cd47ac1ed",
@@ -16,6 +30,13 @@
         "sha256": "38808a798485e1c0938dfcce7e942131415fc6c7834f83a5a85a4c4edb5539d6",
         "arch": "x64",
         "notes": "nts-vs16"
+      },
+      {
+        "version": "8.2.36",
+        "url": "https://windows.php.net/downloads/releases/php-8.2.36-nts-Win32-vs16-x64.zip",
+        "sha256": "0b541b7e9db3c55b9324f3f1f30f084a340657d1b57ca4f7a3acaca6b2e8a799",
+        "arch": "x64",
+        "notes": "nts-vs16; security support ends 2026-12-31"
       }
     ],
     "nginx": [
@@ -26,6 +47,34 @@
         "root": "nginx-1.30.8",
         "arch": "x64",
         "notes": "nginx.org publishes PGP signatures, not hashes; sha256 computed by Ebur"
+      }
+    ],
+    "mariadb": [
+      {
+        "version": "12.3.4",
+        "url": "https://downloads.mariadb.org/rest-api/mariadb/12.3.4/mariadb-12.3.4-winx64.zip",
+        "sha256": "178020ae8ff7d0caf77b5a3ad7e33e574e13001352d31b02503f97224e4b1f77",
+        "root": "mariadb-12.3.4-winx64",
+        "arch": "x64",
+        "notes": "LTS until 2029-06-12; sha256 from the MariaDB downloads API; URL redirects to a nearby mirror (archive.mariadb.org measured at 0.07-0.17 MB/s vs 61 MB/s)"
+      },
+      {
+        "version": "11.8.10",
+        "url": "https://downloads.mariadb.org/rest-api/mariadb/11.8.10/mariadb-11.8.10-winx64.zip",
+        "sha256": "05d04b46763ea3dc9111bfc82dc061e0a158c682a73d31ba34b13f2653c88d17",
+        "root": "mariadb-11.8.10-winx64",
+        "arch": "x64",
+        "notes": "LTS until 2028-06-04; sha256 from the MariaDB downloads API"
+      }
+    ],
+    "adminer": [
+      {
+        "version": "6.3.1",
+        "url": "https://github.com/vrana/adminer/releases/download/v6.3.1/adminer-6.3.1.php",
+        "sha256": "a9aed04e4e68c4e46283804a69ee70cad4fbf23203b46470b760868b2fd9bd76",
+        "file": "index.php",
+        "arch": "x64",
+        "notes": "single PHP file, all database drivers; sha256 from the GitHub release digest"
       }
     ]
   }

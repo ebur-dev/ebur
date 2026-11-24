@@ -31,6 +31,7 @@ type Release struct {
 	URL     string `json:"url"`             // https URL of the zip
 	SHA256  string `json:"sha256"`          // lowercase hex
 	Root    string `json:"root,omitempty"`  // folder inside the zip to extract, e.g. "nginx-1.30.8"
+	File    string `json:"file,omitempty"`  // set for single-file downloads (not zips): saved under this name
 	Arch    string `json:"arch"`            // "x64" or "arm64"
 	Notes   string `json:"notes,omitempty"` // e.g. build flavour "nts-vs17"
 }
@@ -84,6 +85,9 @@ func (m *Manifest) Validate() error {
 			}
 			if strings.Contains(r.Root, "..") || strings.ContainsAny(r.Root, `\:`) || strings.HasPrefix(r.Root, "/") {
 				return fmt.Errorf("%s: root must be a plain relative folder", where)
+			}
+			if r.File != "" && (r.Root != "" || strings.ContainsAny(r.File, `/\:`) || strings.HasPrefix(r.File, ".")) {
+				return fmt.Errorf("%s: file must be a plain file name and cannot be combined with root", where)
 			}
 		}
 	}

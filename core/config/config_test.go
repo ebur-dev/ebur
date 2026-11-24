@@ -65,4 +65,12 @@ func TestInvalid(t *testing.T) {
 	if err := Save(p, bad); err == nil {
 		t.Fatal("oversized pool accepted")
 	}
+	bad = Defaults()
+	bad.DBPort = 80
+	if err := Save(p, bad); err == nil {
+		t.Fatal("privileged db_port accepted")
+	}
+	if d := Defaults(); d.DBPort != 3306 {
+		t.Fatal(d.DBPort)
+	}
 }

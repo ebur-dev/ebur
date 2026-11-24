@@ -13,10 +13,12 @@ import (
 	"github.com/ebur/ebur/core/nginxconf"
 	"github.com/ebur/ebur/core/paths"
 	"github.com/ebur/ebur/core/php"
+	"github.com/ebur/ebur/core/provision"
 	"github.com/ebur/ebur/core/runtimes"
 	"github.com/ebur/ebur/core/sites"
 	"github.com/ebur/ebur/core/supervisor"
 	"github.com/ebur/ebur/internal/fsutil"
+	"github.com/ebur/ebur/internal/proc"
 )
 
 const (
@@ -44,14 +46,63 @@ func activeOrNewest(root paths.Root, cfg config.Settings, runtime string) (strin
 		}
 	}
 	if len(installed) == 0 {
-		example := map[string]string{"php": "ebur php install 8.4", "nginx": "ebur install nginx"}[runtime]
+		example := "ebur install " + runtime
+		if runtime == "php" {
+			example = "ebur php install 8.4"
+		}
 		return "", &hinted{fmt.Sprintf("%s is not installed", runtime), "Run `" + example + "`."}
 	}
 	return installed[0], nil
 }
 
+// optional is activeOrNewest for runtimes the stack can run without
+// (MariaDB, Adminer): it returns "" when none is installed.
+func optional(root paths.Root, cfg config.Settings, runtime string) (string, error) {
+	if installed, _ := runtimes.Installed(root, runtime); len(installed) == 0 && cfg.Active[runtime] == "" {
+		return "", nil
+	}
+	return activeOrNewest(root, cfg, runtime)
+}
+
+// reserved folder names under www\ that Ebur serves itself.
+var reserved = map[string]string{"db": "Adminer"}
+
+// mariadbSpec runs mariadbd with Ebur's my.ini, setting up the data folder
+// first if it is missing.
+func mariadbSpec(root paths.Root, version, password string, port int) (supervisor.Spec, error) {
+	dir := root.RuntimeDir("mariadb", version)
+	dataDir, _ := provision.MariaDBPaths(root, version)
+	myIni, err := provision.WriteMyIni(root, version, port)
+	if err != nil {
+		return supervisor.Spec{}, err
+	}
+	if _, err := os.Stat(filepath.Join(dataDir, "mysql")); err != nil {
+		if _, err := provision.Prepare(context.Background(), root, "mariadb", version, nil); err != nil {
+			return supervisor.Spec{}, err
+		}
+		cfg, _ := config.Load(root.Config())
+		password = cfg.DBRootPassword
+	}
+	defaults := "--defaults-file=" + filepath.ToSlash(myIni) // must be the first option
+	admin := filepath.Join(dir, "bin", proc.Exe("mariadb-admin"))
+	return supervisor.Spec{
+		Name:    "mariadb",
+		Path:    filepath.Join(dir, "bin", proc.Exe("mariadbd")),
+		Args:    []string{defaults, "--console"},
+		Dir:     dir,
+		LogFile: filepath.Join(root.Logs(), "mariadb.log"),
+		Stop: func(ctx context.Context, _ int) error {
+			// A clean shutdown avoids InnoDB crash recovery on next start.
+			cmd := exec.CommandContext(ctx, admin, defaults, "--user=root", "shutdown")
+			cmd.Env = append(os.Environ(), "MYSQL_PWD="+password) // keeps it off the command line
+			proc.Hide(cmd)
+			return cmd.Run()
+		},
+	}, nil
+}
+
 // BuildStack is the production stack: Nginx in front of one php-cgi pool
-// for the active PHP version.
+// for the active PHP version, plus MariaDB and Adminer when installed.
 func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 	phpVer, err := activeOrNewest(root, cfg, "php")
 	if err != nil {
@@ -77,9 +128,43 @@ func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 		return Stack{}, err
 	}
 
-	found, skipped, err := sites.Scan(root.WWW(), cfg.TLD)
+	scanned, skipped, err := sites.Scan(root.WWW(), cfg.TLD)
 	if err != nil {
 		return Stack{}, err
+	}
+	var found []sites.Site
+	for _, s := range scanned {
+		if tool, ok := reserved[s.Name]; ok {
+			skipped = append(skipped, sites.Skipped{Folder: s.Name, Reason: fmt.Sprintf("%s is reserved for %s; rename the folder", s.Host, tool)})
+			continue
+		}
+		found = append(found, s)
+	}
+	ports := append([]int{httpPort}, pool.Ports()...)
+	info := Info{PHP: phpVer, Nginx: nginxVer, Sites: found, Skipped: skipped}
+
+	dbVer, err := optional(root, cfg, "mariadb")
+	if err != nil {
+		return Stack{}, err
+	}
+	if dbVer != "" {
+		s, err := mariadbSpec(root, dbVer, cfg.DBRootPassword, cfg.DBPort)
+		if err != nil {
+			return Stack{}, err
+		}
+		specs = append(specs, s)
+		ports = append(ports, cfg.DBPort)
+		info.MariaDB = dbVer
+	}
+	served := found
+	adminerVer, err := optional(root, cfg, "adminer")
+	if err != nil {
+		return Stack{}, err
+	}
+	if adminerVer != "" { // TOOL-01: Adminer is served like any other site
+		tool := sites.Site{Name: "db", Host: "db." + cfg.TLD, DocRoot: root.RuntimeDir("adminer", adminerVer)}
+		served = append(append([]sites.Site(nil), found...), tool)
+		info.Adminer = "http://" + tool.Host
 	}
 
 	listen := listenAddr + ":" + strconv.Itoa(httpPort)
@@ -93,7 +178,7 @@ func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 		TempDir:  tempDir,
 		PIDFile:  filepath.Join(root.Data(), "nginx.pid"),
 		Listen:   listen,
-		Sites:    found,
+		Sites:    served,
 		Pool:     pool,
 	})
 	nginxExe := filepath.Join(nginxDir, "nginx.exe")
@@ -114,16 +199,13 @@ func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 		Stop: func(ctx context.Context, _ int) error {
 			cmd := exec.CommandContext(ctx, nginxExe, append(nginxArgs, "-s", "quit")...)
 			cmd.Dir = nginxDir
-			hideConsole(cmd)
+			proc.Hide(cmd)
 			return cmd.Run()
 		},
 	})
 
-	return Stack{
-		Specs: specs,
-		Ports: append([]int{httpPort}, pool.Ports()...),
-		Info:  Info{PHP: phpVer, Nginx: nginxVer, Listen: listen, Sites: found, Skipped: skipped},
-	}, nil
+	info.Listen = listen
+	return Stack{Specs: specs, Ports: ports, Info: info}, nil
 }
 
 // writeTested writes conf next to path, checks it with `nginx -t`, and
@@ -135,7 +217,7 @@ func writeTested(path, conf, nginxExe, prefix string) error {
 		return err
 	}
 	cmd := exec.Command(nginxExe, "-t", "-p", prefix, "-c", filepath.ToSlash(candidate))
-	hideConsole(cmd)
+	proc.Hide(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return &hinted{
 			fmt.Sprintf("generated Nginx config failed its test; the previous config was kept: %s", lastLine(string(out))),

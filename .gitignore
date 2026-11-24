@@ -12,3 +12,4 @@ spikes/*/work/
 spikes/https/ssl/
 *.pem
 *-key.pem
+*.exe~

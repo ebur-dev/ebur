@@ -55,6 +55,8 @@ func TestRejects(t *testing.T) {
 		"arch":      string(doc(`{"php":[{"version":"8.4.1","url":"https://e.org/a.zip","sha256":"` + sha + `","arch":"x86"}]}`)),
 		"root":      string(doc(`{"php":[{"version":"8.4.1","url":"https://e.org/a.zip","sha256":"` + sha + `","arch":"x64","root":"../x"}]}`)),
 		"duplicate": string(doc(`{"php":[` + rel("8.4.1") + `,` + rel("8.4.1") + `]}`)),
+		"file path": string(doc(`{"adminer":[{"version":"6.3.1","url":"https://e.org/a.php","sha256":"` + sha + `","arch":"x64","file":"../a.php"}]}`)),
+		"file+root": string(doc(`{"adminer":[{"version":"6.3.1","url":"https://e.org/a.php","sha256":"` + sha + `","arch":"x64","file":"a.php","root":"x"}]}`)),
 	}
 	for name, body := range bad {
 		if _, err := Parse([]byte(body)); err == nil {
@@ -92,7 +94,7 @@ func TestRepoManifest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"php", "nginx"} {
+	for _, name := range []string{"php", "nginx", "mariadb", "adminer"} {
 		if _, err := m.Resolve(name, "", "x64"); err != nil {
 			t.Error(err)
 		}

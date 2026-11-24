@@ -62,7 +62,16 @@ func (in *Installer) Install(ctx context.Context, runtime string, rel manifest.R
 
 	staging := filepath.Join(in.Root.Bin(), runtime, "."+rel.Version+".partial")
 	os.RemoveAll(staging) // leftover from a crashed install
-	if err := extract(zipPath, staging, rel.Root); err != nil {
+	if rel.File != "" {
+		// Single-file runtime (e.g. Adminer): place the verified download.
+		if err := os.MkdirAll(staging, 0o755); err != nil {
+			return "", err
+		}
+		if err := fsutil.Rename(zipPath, filepath.Join(staging, rel.File)); err != nil {
+			os.RemoveAll(staging)
+			return "", err
+		}
+	} else if err := extract(zipPath, staging, rel.Root); err != nil {
 		os.RemoveAll(staging)
 		return "", fmt.Errorf("extract %s %s: %w", runtime, rel.Version, err)
 	}

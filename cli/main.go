@@ -31,7 +31,7 @@ func main() {
 	}
 	root.AddCommand(
 		statusCmd(), startCmd(), stopCmd(), restartCmd(), quitCmd(),
-		phpCmd(), installCmd(), sitesCmd(), daemonCmd(),
+		phpCmd(), installCmd(), sitesCmd(), dbCmd(), doctorCmd(), daemonCmd(),
 	)
 	if err := root.Execute(); err != nil {
 		printError(err)

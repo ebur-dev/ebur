@@ -220,10 +220,13 @@ func printStatus(st host.Status) {
 		fmt.Fprintf(w, "%s\t%s\t%s\n", g.name, state, joinOr(g.pids, "-"))
 	}
 	w.Flush()
-	if len(st.Info.Sites) > 0 && st.Summary != "none" {
+	if st.Summary != "none" {
 		fmt.Println()
 		for _, s := range st.Info.Sites {
 			fmt.Printf("  http://%s  ->  %s\n", s.Host, s.DocRoot)
+		}
+		if st.Info.Adminer != "" {
+			fmt.Printf("  %s  ->  Adminer (credentials: ebur db)\n", st.Info.Adminer)
 		}
 	}
 	for _, s := range st.Info.Skipped {
