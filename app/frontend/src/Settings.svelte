@@ -1,8 +1,25 @@
 <script>
   import { onMount } from 'svelte'
   import { call, errorText } from './api.js'
+  import { applyTheme } from './theme.js'
 
   let { ov, run } = $props()
+  let appearance = $state('system')
+  const modes = [
+    { id: 'system', label: 'System' },
+    { id: 'light', label: 'Light' },
+    { id: 'dark', label: 'Dark' },
+  ]
+
+  async function setAppearance(mode) {
+    appearance = mode
+    applyTheme(mode)
+    try {
+      await call('SetAppearance', mode)
+    } catch (e) {
+      sslError = errorText(e)
+    }
+  }
   let db = $state(null)
   let ssl = $state(null)
   let reveal = $state(false)
@@ -11,6 +28,7 @@
   let copied = $state('')
 
   async function load() {
+    appearance = await call('Appearance')
     db = await call('Database')
     ssl = await call('SSL')
   }
@@ -41,6 +59,16 @@
 <h2>Settings</h2>
 
 <div class="grid">
+  <section class="card">
+    <h3>Appearance</h3>
+    <div class="segmented" role="radiogroup" aria-label="Appearance">
+      {#each modes as m}
+        <button role="radio" aria-checked={appearance === m.id} class:on={appearance === m.id} onclick={() => setAppearance(m.id)}>{m.label}</button>
+      {/each}
+    </div>
+    <p class="muted note">System follows the Windows light or dark setting.</p>
+  </section>
+
   <section class="card">
     <h3>Database</h3>
     {#if !db}
@@ -116,4 +144,9 @@
   .fp { font-size: 11px; }
   p { margin: 0 0 12px; }
   .err { white-space: pre-wrap; color: var(--red); font-family: var(--font-ui); margin: 10px 0 0; }
+  .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .segmented button { border: none; border-radius: 0; padding: 7px 16px; background: var(--surface); }
+  .segmented button + button { border-left: 1px solid var(--border); }
+  .segmented button.on { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+  .note { margin: 10px 0 0; font-size: 13px; }
 </style>

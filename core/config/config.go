@@ -28,6 +28,9 @@ type Settings struct {
 	TLD string `json:"tld"`
 	// ManifestURL is where the runtime manifest is fetched from.
 	ManifestURL string `json:"manifest_url,omitempty"`
+	// Theme is the window appearance: "system" (follow Windows), "light"
+	// or "dark" (GUI-05).
+	Theme string `json:"theme,omitempty"`
 	// DBPort is the MariaDB port. Change it when another server (e.g.
 	// Laragon's MySQL) already uses 3306.
 	DBPort int `json:"db_port"`
@@ -75,6 +78,11 @@ func (s Settings) Validate() error {
 	}
 	if s.PHPPoolSize > 64 {
 		return fmt.Errorf("config: php_pool_size %d is too large (max 64)", s.PHPPoolSize)
+	}
+	switch s.Theme {
+	case "", "system", "light", "dark":
+	default:
+		return fmt.Errorf("config: unknown theme %q (use system, light or dark)", s.Theme)
 	}
 	if s.DBPort < 1024 || s.DBPort > 65535 {
 		return fmt.Errorf("config: db_port %d must be between 1024 and 65535", s.DBPort)

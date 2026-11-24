@@ -16,6 +16,7 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
+	"github.com/wailsapp/wails/v3/pkg/w32"
 
 	"github.com/ebur/ebur/core/host"
 	"github.com/ebur/ebur/core/paths"
@@ -55,6 +56,7 @@ func main() {
 	app := application.New(application.Options{
 		Name:        "Ebur",
 		Description: "Local PHP development environment",
+		Icon:        appIconPNG, // window and taskbar icon
 		Services:    []application.Service{application.NewService(svc)},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(dist)},
 		Windows:     application.WindowsOptions{DisableQuitOnLastWindowClosed: true},
@@ -81,6 +83,11 @@ func main() {
 				win.Focus()
 				return
 			}
+			theme, dark := windowTheme(svc.Appearance())
+			bg := application.NewRGB(0xF6, 0xF1, 0xE4)
+			if dark {
+				bg = application.NewRGB(0x1F, 0x22, 0x25) // no white flash in dark mode
+			}
 			win = app.Window.NewWithOptions(application.WebviewWindowOptions{
 				Title:            "Ebur",
 				Width:            1040,
@@ -88,13 +95,25 @@ func main() {
 				MinWidth:         760,
 				MinHeight:        480,
 				URL:              "/",
-				BackgroundColour: application.NewRGB(0xF6, 0xF1, 0xE4),
+				BackgroundColour: bg,
+				Windows:          application.WindowsWindow{Theme: theme},
 			})
 			win.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
 				winMu.Lock()
 				win = nil
 				winMu.Unlock()
 			})
+		})
+	}
+
+	svc.applyTheme = func(mode string) {
+		application.InvokeSync(func() {
+			winMu.Lock()
+			defer winMu.Unlock()
+			if win != nil {
+				_, dark := windowTheme(mode)
+				w32.SetTheme(uintptr(win.NativeWindow()), dark)
+			}
 		})
 	}
 
@@ -122,4 +141,16 @@ func main() {
 		log.Fatal(err)
 	}
 	b.shutdown()
+}
+
+// windowTheme maps the saved appearance to Wails' window theme and
+// whether it is dark right now.
+func windowTheme(mode string) (application.Theme, bool) {
+	switch mode {
+	case "light":
+		return application.Light, false
+	case "dark":
+		return application.Dark, true
+	}
+	return application.SystemDefault, w32.IsCurrentlyDarkMode()
 }

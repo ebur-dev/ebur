@@ -21,8 +21,10 @@
   color-scheme: light;
 }
 
+/* Dark: chosen explicitly (data-theme="dark"), or "System" while Windows
+   is dark. data-theme="light" keeps light even when Windows is dark. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #1f2225;
     --surface: #2b2f33;
     --surface-2: #343a3f;
@@ -31,6 +33,15 @@
     --border: #41474d;
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #1f2225;
+  --surface: #2b2f33;
+  --surface-2: #343a3f;
+  --text: #f6f1e4;
+  --muted: #b5b0a3;
+  --border: #41474d;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }

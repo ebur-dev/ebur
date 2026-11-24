@@ -7,7 +7,7 @@
   let lines = $state([])
   let follow = $state(true)
   let error = $state('')
-  let pre
+  let pre = $state()
 
   async function load() {
     try {

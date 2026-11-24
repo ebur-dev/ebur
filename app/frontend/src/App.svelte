@@ -6,6 +6,7 @@
   import Logs from './Logs.svelte'
   import Health from './Health.svelte'
   import Settings from './Settings.svelte'
+  import icon from '../../icon/ebur-256.png'
 
   const tabs = ['Sites', 'Services', 'Logs', 'Health', 'Settings']
   const summaryText = { all: 'All services running', some: 'Some services running', none: 'Services stopped' }
@@ -47,7 +48,7 @@
 <div class="shell">
   <header>
     <div class="brand">
-      <span class="logo">ebur</span>
+      <span class="logo"><img src={icon} alt="" width="28" height="28" />ebur</span>
       {#if ov}
         <span class="status"><span class="dot {ov.status.summary}"></span>{busy || summaryText[ov.status.summary]}</span>
       {/if}
@@ -112,7 +113,9 @@
     padding: 14px 20px; background: var(--ink); color: var(--ivory);
   }
   .brand { display: flex; align-items: baseline; gap: 16px; }
-  .logo { font-size: 22px; font-weight: 700; letter-spacing: 0.02em; }
+  .logo { font-size: 22px; font-weight: 700; letter-spacing: 0.02em; display: inline-flex; align-items: center; gap: 10px; }
+  .logo img { border-radius: 7px; box-shadow: 0 0 0 1px #4a5056; }
+  .brand { align-items: center; }
   .status { font-size: 13px; opacity: 0.9; display: inline-flex; align-items: center; }
   header .php { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
   header button:not(.primary) { background: transparent; color: var(--ivory); border-color: #5b6168; }

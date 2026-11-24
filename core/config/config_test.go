@@ -70,6 +70,11 @@ func TestInvalid(t *testing.T) {
 	if err := Save(p, bad); err == nil {
 		t.Fatal("privileged db_port accepted")
 	}
+	bad = Defaults()
+	bad.Theme = "purple"
+	if err := Save(p, bad); err == nil {
+		t.Fatal("unknown theme accepted")
+	}
 	if d := Defaults(); d.DBPort != 3306 {
 		t.Fatal(d.DBPort)
 	}

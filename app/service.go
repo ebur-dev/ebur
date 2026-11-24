@@ -34,6 +34,8 @@ type App struct {
 	b       *backend
 	app     *application.App
 	changed func() // refreshes the tray after an action
+	// applyTheme recolours the open window's title bar.
+	applyTheme func(mode string)
 }
 
 func withHint(err error) error {
@@ -368,6 +370,32 @@ func (a *App) DisableHTTPS() (SSLInfo, error) {
 	}
 	a.restartIfRunning()
 	return a.SSL(), a.after(nil)
+}
+
+// Appearance returns "system", "light" or "dark" (GUI-05).
+func (a *App) Appearance() string {
+	cfg, _ := config.Load(a.root.Config())
+	if cfg.Theme == "" {
+		return "system"
+	}
+	return cfg.Theme
+}
+
+// SetAppearance saves the choice and recolours the window's title bar;
+// the page recolours itself.
+func (a *App) SetAppearance(mode string) error {
+	cfg, err := config.Load(a.root.Config())
+	if err != nil {
+		return withHint(err)
+	}
+	cfg.Theme = mode
+	if err := config.Save(a.root.Config(), cfg); err != nil {
+		return err
+	}
+	if a.applyTheme != nil {
+		a.applyTheme(mode)
+	}
+	return nil
 }
 
 func (a *App) restartIfRunning() {
