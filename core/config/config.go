@@ -28,6 +28,9 @@ type Settings struct {
 	TLD string `json:"tld"`
 	// ManifestURL is where the runtime manifest is fetched from.
 	ManifestURL string `json:"manifest_url,omitempty"`
+	// ManualHosts stops Ebur from updating the hosts file after a start;
+	// `ebur hosts sync` still works (SITE-02).
+	ManualHosts bool `json:"manual_hosts,omitempty"`
 	// Theme is the window appearance: "system" (follow Windows), "light"
 	// or "dark" (GUI-05).
 	Theme string `json:"theme,omitempty"`

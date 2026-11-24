@@ -304,5 +304,5 @@ func checkHosts(path string, want []string) Check {
 	}
 	return Check{"Hosts file", Warn,
 		"not mapped to 127.0.0.1: " + strings.Join(missing, ", ") + lockNote,
-		"Automatic hosts entries (SITE-02) are not in this build yet. As admin, add a line like `127.0.0.1 " + missing[0] + "` to " + path + "." + lockHint}
+		"Run `ebur hosts sync` (one administrator prompt)." + lockHint}
 }

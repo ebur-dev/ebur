@@ -110,6 +110,9 @@ func serviceCmd(use, short, method string, needsHost bool) *cobra.Command {
 			}
 			if err == nil {
 				fmt.Printf("\n%s done in %v\n", method, time.Since(t0).Round(10*time.Millisecond))
+				if method == "start" || method == "restart" {
+					autoSyncHosts(root) // SITE-02: map new sites, one prompt if needed
+				}
 			}
 			return err
 		},

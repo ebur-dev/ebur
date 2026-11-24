@@ -20,6 +20,8 @@ import (
 	"github.com/ebur/ebur/core/config"
 	"github.com/ebur/ebur/core/doctor"
 	"github.com/ebur/ebur/core/host"
+	"github.com/ebur/ebur/core/hostsfile"
+	"github.com/ebur/ebur/core/hostsync"
 	"github.com/ebur/ebur/core/install"
 	"github.com/ebur/ebur/core/paths"
 	"github.com/ebur/ebur/core/runtimes"
@@ -37,6 +39,7 @@ type App struct {
 	changed func() // refreshes the tray after an action
 	// applyTheme recolours the open window's title bar.
 	applyTheme func(mode string)
+	hostsNote  string // why the last hosts sync failed, for the Hosts card
 }
 
 func withHint(err error) error {
@@ -137,7 +140,69 @@ func (a *App) Overview() (Overview, error) {
 
 func (a *App) Start() (host.Status, error) {
 	var st host.Status
-	return st, a.after(a.b.call("start", host.Selection{}, &st))
+	err := a.b.call("start", host.Selection{}, &st)
+	if err == nil {
+		// Map new sites; a declined or blocked prompt is shown in the
+		// Hosts card, not as a failed start.
+		if cfg, _ := config.Load(a.root.Config()); !cfg.ManualHosts {
+			a.syncHosts(true)
+		}
+	}
+	return st, a.after(err)
+}
+
+// HostsInfo is what the Hosts card shows (SITE-02).
+type HostsInfo struct {
+	Path     string   `json:"path"`
+	Wanted   []string `json:"wanted"`
+	InSync   bool     `json:"inSync"`
+	Manual   bool     `json:"manual"`
+	LastNote string   `json:"lastNote"`
+}
+
+func (a *App) Hosts() HostsInfo {
+	cfg, _ := config.Load(a.root.Config())
+	want, _ := hostsync.Wanted(a.root)
+	ok, _ := hostsync.InSync(want)
+	if want == nil {
+		want = []string{}
+	}
+	return HostsInfo{Path: hostsfile.Path(), Wanted: want, InSync: ok, Manual: cfg.ManualHosts, LastNote: a.hostsNote}
+}
+
+// SyncHosts is the Update button: it always tries (one UAC prompt).
+func (a *App) SyncHosts() (HostsInfo, error) { return a.syncHosts(false) }
+
+// syncHosts maps every site to 127.0.0.1. After a start (auto) it does
+// not prompt again for names whose last automatic attempt failed.
+func (a *App) syncHosts(auto bool) (HostsInfo, error) {
+	want, err := hostsync.Wanted(a.root)
+	if err != nil {
+		return a.Hosts(), err
+	}
+	if auto {
+		_, err = hostsync.AutoSync(a.root, want)
+	} else {
+		hostsync.Forget(a.root)
+		_, err = hostsync.Sync(want)
+	}
+	var skipped *hostsync.ErrSkipped
+	switch {
+	case errors.As(err, &skipped):
+		a.hostsNote = "Not asked again after Start because the last attempt failed (" + skipped.Reason + "). Click Update hosts file to try again."
+	case errors.Is(err, hostsync.ErrDeclined):
+		a.hostsNote = "The administrator prompt was declined, so the hosts file was not updated."
+	case errors.Is(err, hostsync.ErrLocked):
+		a.hostsNote = "Security software is protecting the hosts file. Allow changes to it in that program's settings (Webroot: \"Prevent any program from modifying the HOSTS file\"), then try again."
+	case err != nil:
+		a.hostsNote = err.Error()
+	default:
+		a.hostsNote = ""
+	}
+	if a.hostsNote != "" {
+		return a.Hosts(), errors.New(a.hostsNote)
+	}
+	return a.Hosts(), nil
 }
 
 func (a *App) Stop() (host.Status, error) {

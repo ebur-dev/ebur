@@ -134,9 +134,9 @@ The MVP needs 23 Must requirements across runtimes, services, sites and the two 
 | ID | Requirement | Priority | Release |
 | --- | --- | --- | --- |
 | SITE-01 | Every folder in `www\` shall be served at `<folder>.test` with no manual setup. | Must | MVP |
-| SITE-02 | The system shall add and remove hosts-file entries through a small elevated helper, prompting once per change batch. If another process locks the file, the helper shall retry, then name the locking process and explain how to allow Ebur. | Must | MVP |
+| SITE-02 | The system shall add and remove hosts-file entries through a small elevated helper, prompting once per change batch. If another process locks the file, the helper shall retry, then name the locking process and explain how to allow Ebur. The helper accepts only names ending in `.test` or `.localhost`, always maps them to 127.0.0.1, and edits only the `# ebur begin` / `# ebur end` block. After an automatic attempt is declined or blocked, starts do not prompt again for the same names. | Must | MVP |
 | SITE-03 | The system shall detect a site's document root (`public\`, `web\` or the folder itself). | Must | MVP |
-| SITE-04 | The user shall be able to change the TLD (default `.test`) and add custom domains per site. | Should | v1 |
+| SITE-04 | The user shall be able to change the TLD (default `.test`) and add custom domains per site. Needs a design for the elevated helper, which only accepts `.test` and `.localhost` so it cannot be used to redirect real sites; and the local CA is name-constrained to the TLD, so a TLD change means a new CA. | Should | v1 |
 | SITE-05 | The system shall watch `www\` and apply new or removed sites without a restart. | Should | v1 |
 
 ### 3.5 Local HTTPS (SSL)

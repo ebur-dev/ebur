@@ -27,7 +27,25 @@
   let sslError = $state('')
   let copied = $state('')
 
+  let hosts = $state(null)
+  let hostsBusy = $state(false)
+  let hostsError = $state('')
+
+  async function syncHosts() {
+    hostsBusy = true
+    hostsError = ''
+    try {
+      hosts = await call('SyncHosts')
+    } catch (e) {
+      hostsError = errorText(e)
+      hosts = await call('Hosts')
+    } finally {
+      hostsBusy = false
+    }
+  }
+
   async function load() {
+    hosts = await call('Hosts')
     appearance = await call('Appearance')
     db = await call('Database')
     ssl = await call('SSL')
@@ -116,6 +134,28 @@
   </section>
 
   <section class="card">
+    <h3>Site names (hosts file)</h3>
+    {#if !hosts}
+      <p class="muted">Loading…</p>
+    {:else}
+      <p>
+        <span class="dot {hosts.inSync ? 'ok' : 'warn'}"></span>
+        {#if hosts.wanted.length === 0}No sites to map yet.
+        {:else if hosts.inSync}All {hosts.wanted.length} site names point to this computer.
+        {:else}Some site names are not mapped yet, so browsers cannot find them.{/if}
+      </p>
+      {#if hosts.wanted.length}<p class="mono muted small">{hosts.wanted.join(', ')}</p>{/if}
+      <div class="row">
+        <button class="primary" disabled={hostsBusy || hosts.inSync} onclick={syncHosts}>
+          {hostsBusy ? 'Waiting for the Windows prompt…' : hosts.inSync ? 'Up to date' : 'Update hosts file'}
+        </button>
+      </div>
+      <p class="muted note">Windows asks for administrator permission once per change. {hosts.manual ? 'Automatic updates are off (manual_hosts).' : 'Ebur updates it after Start.'}</p>
+      {#if hostsError || hosts.lastNote}<pre class="err">{hostsError || hosts.lastNote}</pre>{/if}
+    {/if}
+  </section>
+
+  <section class="card">
     <h3>Folders</h3>
     <dl>
       <dt>Ebur</dt><dd class="mono">{ov.root}</dd>
@@ -149,4 +189,5 @@
   .segmented button + button { border-left: 1px solid var(--border); }
   .segmented button.on { background: var(--accent); color: var(--accent-text); font-weight: 600; }
   .note { margin: 10px 0 0; font-size: 13px; }
+  .small { font-size: 12px; }
 </style>
