@@ -28,7 +28,7 @@ var (
 )
 
 func main() {
-	f, err := os.Open("ebur_logo_dark.png")
+	f, err := os.Open("docs/brand/ebur_logo_dark.png")
 	if err != nil {
 		log.Fatal(err)
 	}

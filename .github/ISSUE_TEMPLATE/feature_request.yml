@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest something Ebur should do
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: Describe the problem or task, not only the solution. For example "I work on a project that needs PostgreSQL" rather than "add PostgreSQL".
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could Ebur help?
+      description: How you imagine it working, in the window, the CLI or both.
+  - type: textarea
+    id: now
+    attributes:
+      label: How do you do this today?
+      description: Another tool, a workaround, or not at all.
+  - type: input
+    id: srs
+    attributes:
+      label: Related requirement (optional)
+      description: An ID from the [SRS](https://github.com/ebur-dev/ebur/blob/main/docs/SRS.md), if one fits, such as PHP-06.

@@ -134,7 +134,7 @@ For quick development builds, see [app/README.md](app/README.md).
 | `spikes/` | Early feasibility experiments, kept for reference |
 
 The requirements, decisions and known risks are in the
-[Software Requirements Specification](Ebur%20%E2%80%94%20Software%20Requirements%20Specification.md).
+[Software Requirements Specification](docs/SRS.md).
 Requirement IDs such as `SITE-02` appear in code comments, issues and commits.
 
 ## Keeping runtime versions current
@@ -183,8 +183,9 @@ Without the GitHub CLI (PowerShell; works once the repository is public):
 
 ## Contributing
 
-Issues and pull requests are welcome. Please reference the requirement ID
-your change touches, and run `go test ./...` before sending a pull request.
+Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md)
+for how to build, test and propose changes. Please report security
+problems privately, as described in [SECURITY.md](SECURITY.md).
 
 ## Licence
 

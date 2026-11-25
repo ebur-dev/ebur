@@ -206,7 +206,7 @@ The MVP needs 23 Must requirements across runtimes, services, sites and the two 
 | SEC-06 | `ebur share` shall ask for confirmation before exposing a site that runs a vulnerable or end-of-life runtime. | Must | v1 |
 | SEC-07 | Ebur shall never upgrade a runtime without user approval, and shall let users snooze warnings per runtime. | Must | v1 |
 | SEC-08 | A scheduled CI job shall refresh security data from endoflife.date, official release notes and OSV.dev / NVD, open a pull request for maintainer review, and publish a signed manifest that clients verify. Signing and publishing implemented Nov 25, 2026: `.github/workflows/publish-manifest.yml` signs the manifest with the Ed25519 key in the `MANIFEST_SIGNING_KEY` secret (made by `build/manifest-sign keygen`; it refuses a key that does not match core/catalog's public key) and publishes it with its signature as assets of the "manifest" pre-release whenever it changes on main; clients verify it (SEC-02). OSV.dev/NVD data is still to do. Earlier, Nov 25, 2026: `.github/workflows/manifest-update.yml` runs `build/manifest-update` daily. It updates Node (LTS lines only, nodejs.org + SHASUMS256.txt), PHP (windows releases.json SHA-256, php.net "security" tag), Composer, Mailpit, cloudflared, Redis and Adminer (GitHub release digests), with end-of-life dates from endoflife.date; a release waits 14 days unless marked as a security fix; each series keeps its newest eligible patch, and new series are added only for supported Node LTS lines and new PHP minors. MySQL, MariaDB and Nginx updates are reported for a manual, signature-checked update. It opens or updates one pull request; every run's report is on its summary page. | Must | v1 |
-| SEC-09 | The repo shall include `SECURITY.md` and accept private vulnerability reports through GitHub Security Advisories. | Should | MVP |
+| SEC-09 | The repo shall include `SECURITY.md` and accept private vulnerability reports through GitHub Security Advisories. `SECURITY.md` added Nov 25, 2026 (scope, how to report, response times); private vulnerability reporting must be switched on in the repository settings. | Should | MVP |
 
 Security checks download a public file only; Ebur never sends installed versions or project data anywhere (NFR-17).
 
@@ -351,9 +351,12 @@ ebur/
 ├── core/        # Go: runtimes, configs, supervisor, sites, certs, projects
 ├── cli/         # Go: ebur command (cobra)
 ├── app/         # Wails tray app + frontend
-├── helper/      # elevated hosts-file and CA helper
-├── templates/   # default config templates
-└── manifest/    # runtime versions, URLs, SHA-256
+├── helper/      # elevated hosts-file helper
+├── internal/    # shared Go helpers, the manifest bot, icon resources
+├── manifest/    # runtime versions, URLs, SHA-256 (signed when published)
+├── build/       # release script, installer, manifest tools
+├── docs/        # this SRS, screenshots, logos
+└── spikes/      # early feasibility experiments
 ```
 
 ### 6.4 Runtime manifest security fields

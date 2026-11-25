@@ -25,7 +25,7 @@ func makeLink(link, target string) error {
 	return nil
 }
 
-// longPath expands 8.3 short names (C:\Users\DSMINI~1) so paths compare.
+// longPath expands 8.3 short names (C:\Users\JOHNSM~1) so paths compare.
 // Windows only expands paths that exist, so the longest existing parent
 // is expanded and the rest appended.
 func longPath(p string) string {
