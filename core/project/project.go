@@ -155,10 +155,15 @@ func suggest(c Constraint, available []string) string {
 
 // SetPHP writes "php: <version>" into dir's .ebur, keeping other lines,
 // or removes the line when version is "" (back to the default).
-func SetPHP(dir, version string) error {
+func SetPHP(dir, version string) error { return setVersion(dir, "php", "PHP", version) }
+
+// SetNode writes "node: <version>" into dir's .ebur (or removes it).
+func SetNode(dir, version string) error { return setVersion(dir, "node", "Node", version) }
+
+func setVersion(dir, key, label, version string) error {
 	if version != "" {
 		if _, err := manifest.ParseVersion(version); err != nil {
-			return fmt.Errorf("invalid PHP version %q", version)
+			return fmt.Errorf("invalid %s version %q", label, version)
 		}
 	}
 	path := filepath.Join(dir, FileName)
@@ -169,9 +174,9 @@ func SetPHP(dir, version string) error {
 	var lines []string
 	done := false
 	for _, l := range strings.Split(strings.ReplaceAll(string(raw), "\r\n", "\n"), "\n") {
-		if k, _, ok := strings.Cut(strings.TrimSpace(l), ":"); ok && strings.EqualFold(strings.TrimSpace(k), "php") {
+		if k, _, ok := strings.Cut(strings.TrimSpace(l), ":"); ok && strings.EqualFold(strings.TrimSpace(k), key) {
 			if version != "" && !done {
-				lines = append(lines, fmt.Sprintf("php: %q", version))
+				lines = append(lines, fmt.Sprintf("%s: %q", key, version))
 				done = true
 			}
 			continue
@@ -185,7 +190,7 @@ func SetPHP(dir, version string) error {
 		if len(lines) == 0 {
 			lines = append(lines, "# Ebur settings for this project (see ebur sites).")
 		}
-		lines = append(lines, fmt.Sprintf("php: %q", version))
+		lines = append(lines, fmt.Sprintf("%s: %q", key, version))
 	}
 	if len(lines) == 0 || (len(lines) == 1 && strings.HasPrefix(lines[0], "# Ebur settings")) {
 		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {

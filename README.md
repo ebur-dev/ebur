@@ -67,6 +67,7 @@ ebur status                 what is running, and the site URLs
 ebur php 8.4                switch the default PHP; restarts in about a second
 ebur sites php shop 8.3     pin one site's PHP (writes www\shop\.ebur)
 ebur php install 8.3        add another PHP version
+ebur node install 24        add Node.js (npm, Vite); a site's .nvmrc or package.json picks its version
 ebur sites                  list sites
 ebur new shop --laravel     new Laravel site with its own database (also --wordpress, --symfony)
 ebur link D:\code\shop      serve a project outside www\ (ebur unlink shop undoes it)

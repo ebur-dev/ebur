@@ -60,10 +60,30 @@
     }
   }
 
+  let node = $state(null)
+  let nodeBusy = $state('')
+  let nodeError = $state('')
+
+  async function nodeAction(method, arg, label) {
+    nodeBusy = label
+    nodeError = ''
+    try {
+      node = await call(method, arg)
+    } catch (e) {
+      nodeError = errorText(e)
+      node = await call('Node')
+    } finally {
+      nodeBusy = ''
+    }
+  }
+  // The newest LTS line that is still supported: the one to suggest.
+  let nodeSuggested = $derived(node?.available.find((v) => !v.legacy))
+
   let mailEnv = $derived(mail ? `MAIL_MAILER=smtp\nMAIL_HOST=127.0.0.1\nMAIL_PORT=${mail.smtpPort}\nMAIL_USERNAME=null\nMAIL_PASSWORD=null\nMAIL_ENCRYPTION=null` : '')
 
   async function load() {
     mail = await call('Mail')
+    node = await call('Node')
     hosts = await call('Hosts')
     appearance = await call('Appearance')
     db = await call('Database')
@@ -152,6 +172,50 @@
   </section>
 
   <section class="card">
+    <h3>Node.js</h3>
+    {#if !node}
+      <p class="muted">Loading…</p>
+    {:else}
+      {#if node.installed.length === 0}
+        <p>For front-end tools such as Vite (<code>npm run dev</code> in Laravel). Ebur puts Node on PATH only in its own terminal, so a Node you already have keeps working.</p>
+      {:else}
+        <label class="pick">
+          <span class="muted">Default</span>
+          <select value={node.default} disabled={!!nodeBusy} onchange={(e) => nodeAction('SetNode', e.currentTarget.value, 'Switching…')}>
+            {#each node.installed as v}<option value={v.version}>{v.version}{v.legacy ? ' (end of life)' : ''}</option>{/each}
+          </select>
+        </label>
+        <ul class="versions">
+          {#each node.installed as v}
+            <li>
+              <span class="mono">{v.version}</span>
+              <span class="muted small">{v.legacy ? `end of life since ${v.eol}` : `supported until ${v.eol}`}</span>
+              {#if v.version !== node.default}
+                <button class="link small" disabled={!!nodeBusy} onclick={() => nodeAction('RemoveNode', v.version, 'Removing…')}>Remove</button>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      {#if node.available.length}
+        <div class="row">
+          {#if nodeSuggested}
+            <button class={node.installed.length ? '' : 'primary'} disabled={!!nodeBusy} onclick={() => nodeAction('InstallNode', nodeSuggested.major, `Installing Node ${nodeSuggested.major}…`)}>
+              {nodeBusy || `Install Node ${nodeSuggested.major} (LTS)`}
+            </button>
+          {/if}
+          <select disabled={!!nodeBusy} value="" onchange={(e) => { const m = e.currentTarget.value; e.currentTarget.value = ''; if (m) nodeAction('InstallNode', m, `Installing Node ${m}…`) }}>
+            <option value="">Other versions…</option>
+            {#each node.available as v}<option value={v.major}>Node {v.major}{v.legacy ? ' (end of life, old projects)' : ''}</option>{/each}
+          </select>
+        </div>
+      {/if}
+      <p class="muted note">A site can choose its own version with <code>.nvmrc</code>, <code>engines.node</code> in package.json, or <code>ebur sites node &lt;site&gt; 22</code>.</p>
+    {/if}
+    {#if nodeError}<pre class="err">{nodeError}</pre>{/if}
+  </section>
+
+  <section class="card">
     <h3>HTTPS</h3>
     {#if !ssl}
       <p class="muted">Loading…</p>
@@ -230,4 +294,8 @@
   .segmented button.on { background: var(--accent); color: var(--accent-text); font-weight: 600; }
   .note { margin: 10px 0 0; font-size: 13px; }
   .small { font-size: 12px; }
+  .pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .versions { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 4px; }
+  .versions li { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 </style>

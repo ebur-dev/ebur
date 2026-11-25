@@ -13,6 +13,7 @@
   let db = $state('')
   let adminer = $state(true)
   let mail = $state(true)
+  let node = $state(false)
   let https = $state(true)
   let steps = $state([])
   let result = $state(null)
@@ -41,7 +42,7 @@
     page = 'install'
     steps = []
     try {
-      await call('RunSetup', { php, db, dbPort: opts.dbPort, adminer: db !== '' && adminer, mail, https })
+      await call('RunSetup', { php, db, dbPort: opts.dbPort, adminer: db !== '' && adminer, mail, node, https })
     } catch (e) {
       error = errorText(e)
       page = 'choose'
@@ -95,6 +96,12 @@
         <legend>Mail</legend>
         <label class="radio"><input type="checkbox" bind:checked={mail} /> Catch outgoing email in a local inbox at <code>mail.{opts.tld}</code></label>
         <small class="muted">Password resets and sign-up emails from your sites land there instead of reaching real people (Mailpit).</small>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend>Node.js</legend>
+        <label class="radio"><input type="checkbox" bind:checked={node} /> Install Node.js for front-end tools (npm, Vite)</label>
+        <small class="muted">Laravel and most modern themes build CSS and JavaScript with it. About 30 MB; you can add it later in Settings. A Node you already have keeps working.</small>
       </fieldset>
 
       <fieldset class="field">

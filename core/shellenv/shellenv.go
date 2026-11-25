@@ -17,10 +17,12 @@ import (
 
 // Env is what a console needs on top of the user's own environment.
 type Env struct {
-	Path      []string          // folders to put in front of PATH
-	Vars      map[string]string // variables to set
-	PHP       string            // the PHP version on PATH
-	PHPSource string            // the site that chose it, e.g. "shop (.ebur)"; "" for the default
+	Path       []string          // folders to put in front of PATH
+	Vars       map[string]string // variables to set
+	PHP        string            // the PHP version on PATH
+	PHPSource  string            // the site that chose it, e.g. "shop (.ebur)"; "" for the default
+	Node       string            // the Node version on PATH ("" when Node is not installed)
+	NodeSource string            // like PHPSource, e.g. "shop (.nvmrc)"
 }
 
 func active(root paths.Root, cfg config.Settings, rt string) string {
@@ -41,12 +43,20 @@ func For(root paths.Root, dir string) Env {
 	cfg, _ := config.Load(root.Config())
 	env := Env{Vars: map[string]string{paths.EnvRoot: root.Dir()}}
 	v := active(root, cfg, "php")
-	if dir != "" && v != "" {
+	env.Node = active(root, cfg, "node")
+	if dir != "" {
 		found, _, _ := sites.Scan(root.WWW(), cfg.TLD)
 		if s, ok := sites.ForPath(found, dir); ok {
-			installed, _ := runtimes.Installed(root, "php")
-			c := project.Resolve(s.Dir, installed, v)
-			v, env.PHPSource = c.Version, s.Name+" ("+c.Source+")"
+			if v != "" {
+				installed, _ := runtimes.Installed(root, "php")
+				c := project.Resolve(s.Dir, installed, v)
+				v, env.PHPSource = c.Version, s.Name+" ("+c.Source+")"
+			}
+			// Node too (PROJ-03): .ebur, .nvmrc, then package.json engines.
+			if nodes, _ := runtimes.Installed(root, "node"); len(nodes) > 0 {
+				c := project.ResolveNode(s.Dir, nodes, env.Node)
+				env.Node, env.NodeSource = c.Version, s.Name+" ("+c.Source+")"
+			}
 		}
 	}
 	return build(root, cfg, env, v)
@@ -56,7 +66,7 @@ func For(root paths.Root, dir string) Env {
 // used when no site exists yet, e.g. while `ebur new` runs Composer.
 func ForPHP(root paths.Root, version string) Env {
 	cfg, _ := config.Load(root.Config())
-	env := Env{Vars: map[string]string{paths.EnvRoot: root.Dir()}}
+	env := Env{Vars: map[string]string{paths.EnvRoot: root.Dir()}, Node: active(root, cfg, "node")}
 	if version == "" {
 		version = active(root, cfg, "php")
 	}
@@ -75,6 +85,9 @@ func build(root paths.Root, cfg config.Settings, env Env, v string) Env {
 	}
 	if v := active(root, cfg, "composer"); v != "" {
 		env.Path = append(env.Path, root.RuntimeDir("composer", v))
+	}
+	if env.Node != "" {
+		env.Path = append(env.Path, root.RuntimeDir("node", env.Node)) // node, npm, npx, corepack
 	}
 	if v := active(root, cfg, "mariadb"); v != "" {
 		env.Path = append(env.Path, filepath.Join(root.RuntimeDir("mariadb", v), "bin"))

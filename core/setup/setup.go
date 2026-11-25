@@ -51,6 +51,7 @@ type Choices struct {
 	DBPort  int    `json:"dbPort"`
 	Adminer bool   `json:"adminer"`
 	Mail    bool   `json:"mail"` // Mailpit catches outgoing mail (TOOL-03)
+	Node    bool   `json:"node"` // newest Node.js LTS for front-end tools (PROJ-03)
 	HTTPS   bool   `json:"https"`
 }
 
@@ -185,6 +186,9 @@ func Run(ctx context.Context, root paths.Root, c Choices, hooks Hooks, emit func
 	if c.Mail {
 		steps = append(steps, Step{ID: "mailpit", Label: "Mail capture (mail." + tldOf(root) + ")"})
 	}
+	if c.Node {
+		steps = append(steps, Step{ID: "node", Label: "Node.js (npm, Vite)"})
+	}
 	if c.HTTPS {
 		steps = append(steps, Step{ID: "https", Label: "Local HTTPS"})
 	}
@@ -282,6 +286,11 @@ func Run(ctx context.Context, root paths.Root, c Choices, hooks Hooks, emit func
 	}
 	if c.Mail {
 		if err := installStep("mailpit", "mailpit", ""); err != nil {
+			return err
+		}
+	}
+	if c.Node {
+		if err := installStep("node", "node", ""); err != nil { // "" = newest LTS
 			return err
 		}
 	}

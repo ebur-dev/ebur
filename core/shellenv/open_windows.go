@@ -19,6 +19,9 @@ func Open(root paths.Root, workDir string) error {
 	if env.PHPSource != "" {
 		greet += ". PHP " + env.PHP + " for " + env.PHPSource
 	}
+	if env.NodeSource != "" && env.Node != "" {
+		greet += ". Node " + env.Node + " for " + env.NodeSource
+	}
 	cmdline := `cmd.exe /K "title Ebur terminal && echo ` + greet + ` && echo."`
 	pi, err := startConsole(cmdline, env.Environ(os.Environ()), workDir, windows.SW_SHOWNORMAL)
 	if err != nil {

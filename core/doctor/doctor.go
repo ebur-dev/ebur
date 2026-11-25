@@ -73,6 +73,7 @@ func Run(root paths.Root, opt Options) []Check {
 		{"adminer", false, "ebur install adminer"},
 		{"composer", false, "ebur install composer"},
 		{"mailpit", false, "ebur install mailpit"},
+		{"node", false, "ebur node install 24"},
 	} {
 		c, v := checkRuntime(root, cfg, rt.name, rt.required, rt.install)
 		add(c)
@@ -151,6 +152,27 @@ func Run(root paths.Root, opt Options) []Check {
 			}
 		}
 	}
+	// PROJ-03: the same for Node, which only runs in Ebur's terminal.
+	if def := active["node"]; def != "" {
+		installed, _ := runtimes.Installed(root, "node")
+		used := map[string][]string{}
+		for _, s := range found {
+			c := project.ResolveNode(s.Dir, installed, def)
+			if c.Problem != "" {
+				add(Check{"Site " + s.Name + " Node", Warn, "asks for Node " + c.Want + " in " + c.Source, c.Problem})
+			}
+			used[c.Version] = append(used[c.Version], s.Name)
+		}
+		for _, v := range installed {
+			if sup := install.SupportOf("node", v); sup.Ended {
+				detail := "end of life since " + sup.EOL + " (no security fixes)"
+				if names := used[v]; len(names) > 0 {
+					detail += ", used by: " + strings.Join(names, ", ")
+				}
+				add(Check{"Node " + v, Warn, detail, fmt.Sprintf("Upgrade the projects using it, then `ebur node remove %s`.", major(v))})
+			}
+		}
+	}
 
 	if opt.HostRunning {
 		add(Check{"Ebur host", OK, "running", ""})
@@ -159,6 +181,11 @@ func Run(root paths.Root, opt Options) []Check {
 	}
 	add(checkHTTPS(root, cfg))
 	return out
+}
+
+func major(v string) string {
+	m, _, _ := strings.Cut(v, ".")
+	return m
 }
 
 func checkHTTPS(root paths.Root, cfg config.Settings) Check {

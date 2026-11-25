@@ -78,6 +78,31 @@ func TestForLinkedProject(t *testing.T) {
 	}
 }
 
+// PROJ-03: Node is on PATH, and inside a site it is the site's version.
+func TestForNode(t *testing.T) {
+	root, _ := paths.New(t.TempDir())
+	os.MkdirAll(root.RuntimeDir("php", "8.5.13"), 0o755)
+	os.MkdirAll(root.RuntimeDir("node", "24.22.3"), 0o755)
+	os.MkdirAll(root.RuntimeDir("node", "22.23.5"), 0o755)
+	cfg := config.Defaults()
+	cfg.Active["node"] = "24.22.3"
+	config.Save(root.Config(), cfg)
+	old := filepath.Join(root.WWW(), "old")
+	os.MkdirAll(filepath.Join(old, "resources"), 0o755)
+	os.WriteFile(filepath.Join(old, ".nvmrc"), []byte("22\n"), 0o644)
+
+	if e := For(root, ""); e.Node != "24.22.3" || !strings.Contains(strings.Join(e.Path, ";"), root.RuntimeDir("node", "24.22.3")) || e.Summary() != "php, node" {
+		t.Fatalf("default: %+v (%s)", e, e.Summary())
+	}
+	e := For(root, filepath.Join(old, "resources"))
+	if e.Node != "22.23.5" || !strings.Contains(e.NodeSource, "old (.nvmrc)") || !strings.Contains(strings.Join(e.Path, ";"), root.RuntimeDir("node", "22.23.5")) {
+		t.Fatalf("inside old: %+v", e)
+	}
+	if e.PHP != "8.5.13" {
+		t.Fatalf("PHP changed: %s", e.PHP)
+	}
+}
+
 func TestEnviron(t *testing.T) {
 	e := Env{Path: []string{`C:\e\php`}, Vars: map[string]string{"PHPRC": `C:\e\etc`, "NEW": "1"}}
 	sep := string(os.PathListSeparator)

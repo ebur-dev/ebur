@@ -293,6 +293,15 @@ func (r runner) laravel(ctx context.Context, tmp string, res Result) error {
 	}
 	r.say("Writing database and mail settings to .env")
 	vars["APP_URL"] = res.URL
+	if strings.HasPrefix(res.URL, "https://") {
+		// laravel-vite-plugin serves `npm run dev` over HTTPS with these,
+		// so an https:// page can load Vite's scripts (PROJ-03). Ebur
+		// writes the site's certificate when it picks up the new folder.
+		host := res.Name + "." + r.cfg.TLD
+		d := certs.Dir(r.root.SSL())
+		vars["VITE_DEV_SERVER_KEY"] = filepath.ToSlash(d.SiteKey(host))
+		vars["VITE_DEV_SERVER_CERT"] = filepath.ToSlash(d.SiteCert(host))
+	}
 	if mailInstalled(r.root) {
 		vars["MAIL_MAILER"] = "smtp"
 		vars["MAIL_HOST"] = "127.0.0.1"
@@ -343,7 +352,8 @@ func nextSteps(k Kind, res Result) []string {
 		next = append(next, "Open "+res.URL+" to finish the WordPress install (site title and admin user). The database is already set in wp-config.php.")
 	case Laravel:
 		next = append(next, "Open "+res.URL+". The database "+res.Database+" is set in .env and already migrated.",
-			"Run artisan inside the folder with `ebur exec php artisan …`, or open Ebur's terminal there.")
+			"Run artisan inside the folder with `ebur exec php artisan …`, or open Ebur's terminal there.",
+			"Front end: `npm install` then `npm run dev` in Ebur's terminal (needs Node: `ebur node install 24`).")
 	case Symfony:
 		next = append(next, "Open "+res.URL+". The database "+res.Database+" is set in .env.local.",
 			"Add packages with `ebur exec composer require …` inside the folder (e.g. webapp for a full web app).")

@@ -137,6 +137,10 @@ type SiteRow struct {
 	PHPEOL     string `json:"phpEol"` // set when the version is past end of life
 	Target     string `json:"target"` // linked project's real folder (`ebur link`)
 	Running    bool   `json:"running"`
+	// PROJ-03: Node for npm in this site ("" when Node is not installed).
+	Node        string `json:"node"`
+	NodeSource  string `json:"nodeSource"`
+	NodeProblem string `json:"nodeProblem"`
 }
 
 // LinkProject asks for a folder and serves it as a site (like `ebur link`).
@@ -277,6 +281,11 @@ func (a *App) Overview() (Overview, error) {
 			nginxUp = true
 		}
 	}
+	nodes, _ := runtimes.Installed(a.root, "node")
+	nodeDef := cfg.Active["node"]
+	if nodeDef == "" && len(nodes) > 0 {
+		nodeDef = nodes[0]
+	}
 	for _, s := range found {
 		if s.Name == "db" {
 			continue
@@ -286,6 +295,10 @@ func (a *App) Overview() (Overview, error) {
 			Name: s.Name, URL: scheme + "://" + s.Host, DocRoot: s.DocRoot,
 			PHP: c.Version, PHPSource: c.Source, PHPWant: c.Want, PHPProblem: c.Problem,
 			Target: s.Target, Running: nginxUp,
+		}
+		if len(nodes) > 0 {
+			n := project.ResolveNode(s.Dir, nodes, nodeDef)
+			row.Node, row.NodeSource, row.NodeProblem = n.Version, n.Source, n.Problem
 		}
 		if sup := install.SupportOf("php", c.Version); sup.Ended {
 			row.PHPEOL = sup.EOL
@@ -583,6 +596,89 @@ func (a *App) InstallMail() (MailInfo, error) {
 	}
 	a.restartIfRunning()
 	return a.Mail(), a.after(nil)
+}
+
+// NodeVersion is one Node.js release on the Node card.
+type NodeVersion struct {
+	Version string `json:"version"`
+	Major   string `json:"major"`
+	EOL     string `json:"eol"`
+	Legacy  bool   `json:"legacy"` // past end of life
+}
+
+// NodeInfo is what the Node.js card shows (PROJ-03).
+type NodeInfo struct {
+	Default   string        `json:"default"`
+	Installed []NodeVersion `json:"installed"`
+	Available []NodeVersion `json:"available"` // offered, not installed
+}
+
+func (a *App) Node() NodeInfo {
+	cfg, _ := config.Load(a.root.Config())
+	inst, _ := runtimes.Installed(a.root, "node")
+	info := NodeInfo{Default: cfg.Active["node"], Installed: []NodeVersion{}, Available: []NodeVersion{}}
+	if info.Default == "" && len(inst) > 0 {
+		info.Default = inst[0]
+	}
+	row := func(v string) NodeVersion {
+		s := install.SupportOf("node", v)
+		m, _, _ := strings.Cut(v, ".")
+		return NodeVersion{Version: v, Major: m, EOL: s.EOL, Legacy: s.Ended}
+	}
+	have := map[string]bool{}
+	for _, v := range inst {
+		info.Installed = append(info.Installed, row(v))
+		have[v] = true
+	}
+	if m, err := install.Manifest(); err == nil {
+		for _, r := range m.Releases("node", "x64") {
+			if !have[r.Version] {
+				info.Available = append(info.Available, row(r.Version))
+			}
+		}
+	}
+	return info
+}
+
+// InstallNode downloads a Node.js version, e.g. "24". The first one
+// installed becomes the default.
+func (a *App) InstallNode(version string) (NodeInfo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	_, err := install.Runtime(ctx, a.root, "node", version, nil, nil)
+	return a.Node(), a.after(err)
+}
+
+// SetNode makes an installed version the default. Nothing restarts:
+// new Ebur terminals and `ebur exec` use it.
+func (a *App) SetNode(version string) (NodeInfo, error) {
+	inst, _ := runtimes.Installed(a.root, "node")
+	found := false
+	for _, v := range inst {
+		found = found || v == version
+	}
+	if !found {
+		return a.Node(), fmt.Errorf("Node %s is not installed", version)
+	}
+	cfg, err := config.Load(a.root.Config())
+	if err != nil {
+		return a.Node(), err
+	}
+	cfg.Active["node"] = version
+	return a.Node(), a.after(config.Save(a.root.Config(), cfg))
+}
+
+// RemoveNode deletes an installed version.
+func (a *App) RemoveNode(version string) (NodeInfo, error) {
+	if err := runtimes.Remove(a.root, "node", version, nil); err != nil {
+		return a.Node(), fmt.Errorf("%w\nNext step: close Ebur terminals and stop `npm run dev`, then try again", err)
+	}
+	cfg, _ := config.Load(a.root.Config())
+	if cfg.Active["node"] == version {
+		delete(cfg.Active, "node")
+		config.Save(a.root.Config(), cfg)
+	}
+	return a.Node(), a.after(nil)
 }
 
 // SSLInfo is what the HTTPS panel shows.

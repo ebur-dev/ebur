@@ -77,7 +77,11 @@ func installRuntime(root paths.Root, name, want string) error {
 	}
 	if sup := install.SupportOf(name, res.Version); sup.Ended {
 		fmt.Printf("\nwarning: %s %s reached end of life on %s and gets no security fixes.\n", name, res.Version, sup.EOL)
-		fmt.Println("Use it for old projects only: pin a site with `ebur sites php <site> " + series(res.Version) + "`.")
+		pin := series(res.Version)
+		if name == "node" {
+			pin = major(res.Version)
+		}
+		fmt.Printf("Use it for old projects only: pin a site with `ebur sites %s <site> %s`.\n", name, pin)
 		fmt.Println("Ebur's sites are only reachable from this computer, which limits the risk.")
 	}
 	return nil
@@ -93,8 +97,8 @@ func series(v string) string {
 }
 
 func cmdFor(name string) string {
-	if name == "php" {
-		return "php"
+	if name == "php" || name == "node" {
+		return name
 	}
 	return "install " + name
 }
@@ -111,8 +115,8 @@ func contains(list []string, s string) bool {
 func installCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "install <runtime> [version]",
-		Short:   "Install a runtime (php, nginx, mariadb, adminer) from the manifest",
-		Example: "  ebur install nginx\n  ebur install php 8.3\n  ebur install mariadb\n  ebur install adminer",
+		Short:   "Install a runtime (php, node, nginx, mariadb, adminer, mailpit) from the manifest",
+		Example: "  ebur install nginx\n  ebur install php 8.3\n  ebur install node 24\n  ebur install mariadb\n  ebur install adminer",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := findRoot()
@@ -344,8 +348,18 @@ func sitesCmd() *cobra.Command {
 			if running && st.Info.HTTPS {
 				scheme = "https"
 			}
+			nodes, _ := runtimes.Installed(root, "node")
+			nodeDef := cfg.Active["node"]
+			if nodeDef == "" && len(nodes) > 0 {
+				nodeDef = nodes[0]
+			}
+			nodeOf := map[string]project.Choice{}
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "URL\tPHP\tCHOSEN BY\tSTATUS\tFOLDER")
+			if len(nodes) > 0 {
+				fmt.Fprintln(w, "URL\tPHP\tCHOSEN BY\tNODE\tSTATUS\tFOLDER")
+			} else {
+				fmt.Fprintln(w, "URL\tPHP\tCHOSEN BY\tSTATUS\tFOLDER")
+			}
 			for _, s := range found {
 				status := "stopped"
 				if running {
@@ -363,12 +377,25 @@ func sitesCmd() *cobra.Command {
 				if s.Target != "" {
 					where = "linked: " + s.Target // `ebur link`
 				}
-				fmt.Fprintf(w, "%s://%s\t%s\t%s\t%s\t%s\n", scheme, s.Host, php, by, status, where)
+				if len(nodes) == 0 {
+					fmt.Fprintf(w, "%s://%s\t%s\t%s\t%s\t%s\n", scheme, s.Host, php, by, status, where)
+					continue
+				}
+				nc := project.ResolveNode(s.Dir, nodes, nodeDef)
+				nodeOf[s.Name] = nc
+				node := nc.Version
+				if nc.Source != project.SourceDefault {
+					node += " (" + nc.Source + ")"
+				}
+				fmt.Fprintf(w, "%s://%s\t%s\t%s\t%s\t%s\t%s\n", scheme, s.Host, php, by, node, status, where)
 			}
 			w.Flush()
 			for _, s := range found {
 				if s.PHP.Problem != "" {
 					fmt.Printf("warning: %s: %s\n", s.Name, s.PHP.Problem)
+				}
+				if p := nodeOf[s.Name].Problem; p != "" {
+					fmt.Printf("warning: %s: %s\n", s.Name, p)
 				}
 			}
 			for _, s := range skipped {
@@ -422,6 +449,6 @@ func sitesCmd() *cobra.Command {
 			}
 			return restartIfRunning(root, "to apply it")
 		},
-	})
+	}, sitesNodeCmd())
 	return c
 }

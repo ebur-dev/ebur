@@ -57,6 +57,8 @@
                 <div class="src">pinned in .ebur</div>
               {/if}
               {#if s.phpProblem}<div class="problem" title={s.phpProblem}>{s.phpProblem}</div>{/if}
+              {#if s.node}<div class="src" title="Node for npm in this site's Ebur terminal">Node {s.node}{s.nodeSource !== 'default' ? ` from ${s.nodeSource}` : ''}</div>{/if}
+              {#if s.nodeProblem}<div class="problem" title={s.nodeProblem}>{s.nodeProblem}</div>{/if}
               {#if s.phpEol}<div class="problem" title="This PHP version gets no security fixes. Fine for maintaining an old project on this computer; plan to upgrade.">Legacy: end of life since {s.phpEol}</div>{/if}
             </td>
             <td><span class="dot {s.running ? 'running' : ''}"></span>{s.running ? 'Running' : 'Stopped'}</td>

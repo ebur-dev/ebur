@@ -35,6 +35,7 @@ you install them, checks each download's SHA-256, and keeps them in `bin\`.
 | MariaDB | mariadb.org | GPL-2.0 |
 | Composer | getcomposer.org | MIT |
 | Mailpit (mail capture) | github.com/axllent/mailpit | MIT |
+| Node.js (with npm and Corepack) | nodejs.org | MIT (Node.js; bundled parts under their own licences, see its LICENSE) |
 | Adminer | github.com/vrana/adminer | Apache-2.0 or GPL-2.0 |
 | CA certificate bundle (Mozilla roots, via curl) | curl.se | MPL-2.0 |
 
