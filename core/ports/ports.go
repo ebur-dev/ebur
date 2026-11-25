@@ -65,6 +65,14 @@ func knownStack(o Owner) string {
 		what = "Nginx web server"
 	}
 	const after = " Ebur can use the port once it is stopped; the two cannot serve on the same port at the same time."
+	switch name {
+	case "wslrelay.exe", "wslhost.exe":
+		// WSL forwards ports opened inside Linux to Windows; closing the
+		// relay does nothing useful.
+		return "A program inside WSL (Linux on Windows) is using this port, usually a server in a Docker container or a WSL distro; wslrelay.exe only forwards it to Windows. Stop that server (in Docker Desktop, or for example `wsl -e sudo service redis-server stop`), or run `wsl --shutdown` to stop WSL entirely." + after
+	case "com.docker.backend.exe", "vpnkit.exe", "com.docker.proxy.exe", "docker-proxy.exe":
+		return "A Docker container publishes this port. Stop it in Docker Desktop (Containers), or with `docker ps` and `docker stop <name>`." + after
+	}
 	switch {
 	case strings.Contains(p, `\xampp`):
 		return "This is XAMPP's " + what + ". Stop it in the XAMPP Control Panel, and untick its Autostart there so it does not come back after a restart." + after

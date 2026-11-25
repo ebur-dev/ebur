@@ -95,6 +95,8 @@ func TestHintsNameOtherStacks(t *testing.T) {
 		{Owner{PID: 3, Name: "httpd.exe", Path: `C:\wamp64\bin\apache\apache2.4.62\bin\httpd.exe`}, "WampServer"},
 		{Owner{PID: 4 + 1, Name: "httpd.exe", Path: `C:\laragon\bin\apache\httpd-2.4\bin\httpd.exe`}, "Laragon"},
 		{Owner{PID: 6, Name: "httpd.exe", Path: `C:\Apache24\bin\httpd.exe`}, "Apache2.4"},
+		{Owner{PID: 51488, Name: "wslrelay.exe", Path: `C:\Program Files\WSL\wslrelay.exe`}, "inside WSL"},
+		{Owner{PID: 9, Name: "com.docker.backend.exe", Path: `C:\Program Files\Docker\Docker\resources\com.docker.backend.exe`}, "Docker container"},
 		{Owner{PID: 7, Name: "node.exe", Path: `C:\Program Files\nodejs\node.exe`}, `Close C:\Program Files\nodejs\node.exe`},
 		{Owner{PID: 8, Name: "node.exe"}, "Close node.exe"},
 	}
