@@ -83,7 +83,7 @@ Ebur is a standalone desktop application. It does not compile PHP or servers its
 - Core and CLI written in Go; GUI built with Wails using the system webview.
 - Licence: MIT, compatible with redistributing the bundled tools under their own licences.
 - The product name and binaries shall not use the word "PHP" (PHP licence naming restriction).
-- No writes to the Windows registry or system `PATH`; only the hosts file needs elevation. The local CA goes into the current user's certificate store, which needs no admin rights but shows its own Windows confirmation dialog.
+- No writes to the Windows registry or system `PATH`; only the hosts file needs elevation. One deliberate exception: the installer writes the standard per-user uninstall entry (HKCU) so Ebur appears in Settings > Apps; the portable zip writes nothing. The local CA goes into the current user's certificate store, which needs no admin rights but shows its own Windows confirmation dialog.
 
 ### 2.5 Assumptions and dependencies
 
@@ -286,7 +286,7 @@ Ebur's selling point is being light: under 20 MB to download, under 60 MB of RAM
 
 | ID | Category | Requirement | Measure |
 | --- | --- | --- | --- |
-| NFR-01 | Footprint | Ebur installer (without runtimes) | ≤ 20 MB |
+| NFR-01 | Footprint | Ebur installer (without runtimes). Measured Nov 25, 2026: installer 6.9 MB, portable zip 9.5 MB | ≤ 20 MB |
 | NFR-02 | Footprint | Idle memory (working set, as Task Manager shows it) of tray app with the GUI closed. Closing the window must release the WebView2 instance, not just hide it | ≤ 60 MB |
 | NFR-03 | Performance | Cold start of all MVP services on an SSD, excluding first-run database initialisation | ≤ 3 s |
 | NFR-04 | Performance | Global PHP version switch, including restart | ≤ 5 s |

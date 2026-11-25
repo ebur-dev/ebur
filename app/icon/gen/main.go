@@ -6,11 +6,14 @@
 // It writes:
 //   - app/icon/ebur-256.png: ivory elephant on an Elephant Grey rounded
 //     square, the window and taskbar icon
+//   - build/ebur.ico: the same at 16-256 px, for the installer and shortcuts
 //   - app/icon/elephant-mask-64.png: the elephant alone as an alpha mask,
 //     which the tray combines with a status dot at run time
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"image"
 	"image/color"
 	"image/png"
@@ -42,6 +45,53 @@ func main() {
 
 	write("app/icon/elephant-mask-64.png", alphaImage(sample(mask, sq, 64)))
 	write("app/icon/ebur-256.png", appIcon(mask, sq, 256))
+
+	// A multi-size .ico for the installer and its shortcuts. Each size is
+	// rendered from the source, not scaled down from 256, so small sizes
+	// stay sharp.
+	var sizes []*image.NRGBA
+	for _, n := range []int{16, 20, 24, 32, 40, 48, 64, 128, 256} {
+		sizes = append(sizes, appIcon(mask, sq, n))
+	}
+	writeICO("build/ebur.ico", sizes)
+}
+
+// writeICO writes PNG-compressed entries, supported since Windows Vista.
+func writeICO(path string, imgs []*image.NRGBA) {
+	var pngs [][]byte
+	for _, img := range imgs {
+		var b bytes.Buffer
+		if err := png.Encode(&b, img); err != nil {
+			log.Fatal(err)
+		}
+		pngs = append(pngs, b.Bytes())
+	}
+	var out bytes.Buffer
+	binary.Write(&out, binary.LittleEndian, [3]uint16{0, 1, uint16(len(imgs))}) // reserved, type=icon, count
+	offset := 6 + 16*len(imgs)
+	for i, img := range imgs {
+		n := img.Bounds().Dx()
+		dim := byte(n)
+		if n >= 256 {
+			dim = 0 // 0 means 256
+		}
+		binary.Write(&out, binary.LittleEndian, struct {
+			W, H, Colors, Reserved byte
+			Planes, BitCount       uint16
+			Size, Offset           uint32
+		}{dim, dim, 0, 0, 1, 32, uint32(len(pngs[i])), uint32(offset)})
+		offset += len(pngs[i])
+	}
+	for _, p := range pngs {
+		out.Write(p)
+	}
+	if err := os.MkdirAll("build", 0o755); err != nil {
+		log.Fatal(err)
+	}
+	if err := os.WriteFile(path, out.Bytes(), 0o644); err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("wrote %s (%d sizes)", path, len(imgs))
 }
 
 // elephantMask maps dark pixels to 1 and light pixels to 0, with soft

@@ -1,5 +1,6 @@
-# Build output
+# Build output (build\build.ps1 writes releases to dist\)
 *.exe
+dist/
 
 # Tray app frontend: dependencies and build output (npm run build)
 app/frontend/node_modules/

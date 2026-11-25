@@ -1,0 +1,39 @@
+# Third-party software in Ebur
+
+Ebur keeps every component's own licence (SRS NFR-16). This file is checked
+per release.
+
+## Built into Ebur's programs
+
+`ebur.exe`, `ebur-app.exe` and `ebur-helper.exe` contain:
+
+| Component | Version | Licence |
+| --- | --- | --- |
+| Go standard library | 1.27 | BSD-3-Clause |
+| github.com/wailsapp/wails/v3 | 3.1.0 | MIT |
+| github.com/go-ole/go-ole | 1.3.0 | MIT |
+| github.com/Microsoft/go-winio | 0.6.4 | MIT |
+| github.com/spf13/cobra | 1.10.2 | Apache-2.0 |
+| github.com/spf13/pflag | 1.0.10 | BSD-3-Clause |
+| github.com/inconshreveable/mousetrap | 1.1.0 | Apache-2.0 |
+| golang.org/x/sys | 0.50.0 | BSD-3-Clause |
+| Svelte (window user interface) | 5.57.3 | MIT |
+
+`ebur-helper.exe`, the only program that runs as administrator, contains only
+the Go standard library, `golang.org/x/sys` and Ebur's own hosts-file code.
+
+## Downloaded when you choose them
+
+Ebur does not ship these. It downloads them from their official sources when
+you install them, checks each download's SHA-256, and keeps them in `bin\`.
+
+| Component | Source | Licence |
+| --- | --- | --- |
+| PHP | windows.php.net | PHP License 3.01 |
+| Nginx | nginx.org | BSD-2-Clause |
+| MariaDB | mariadb.org | GPL-2.0 |
+| Composer | getcomposer.org | MIT |
+| Adminer | github.com/vrana/adminer | Apache-2.0 or GPL-2.0 |
+| CA certificate bundle (Mozilla roots, via curl) | curl.se | MPL-2.0 |
+
+Run `ebur doctor` or open the window's Health tab to see which are installed.
