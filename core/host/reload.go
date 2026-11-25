@@ -187,6 +187,7 @@ func (h *Host) watch(ctx context.Context) {
 			return
 		case <-t.C:
 		}
+		h.expireShares() // TOOL-04: shares end on time
 		cur := siteSignature(h.Root, tld())
 		if !h.anyRunning() {
 			last, pending = cur, "" // a start rebuilds from scratch anyway

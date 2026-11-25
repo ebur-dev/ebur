@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +23,7 @@ import (
 	"github.com/ebur-dev/ebur/core/paths"
 	"github.com/ebur-dev/ebur/core/ports"
 	"github.com/ebur-dev/ebur/core/runtimes"
+	"github.com/ebur-dev/ebur/core/share"
 	"github.com/ebur-dev/ebur/core/sites"
 	"github.com/ebur-dev/ebur/core/supervisor"
 )
@@ -74,13 +76,14 @@ type Host struct {
 	// reload, so Nginx's old worker can finish requests sent to it.
 	RetireGrace time.Duration
 
-	sup    *supervisor.Supervisor
-	wanted map[string]bool // services the latest stack needs (see Reload)
-	mu     sync.Mutex      // one start/stop/restart at a time
-	info   Info
-	ports  []int
-	quit   chan struct{}
-	once   sync.Once
+	sup     *supervisor.Supervisor
+	wanted  map[string]bool // services the latest stack needs (see Reload)
+	mu      sync.Mutex      // one start/stop/restart at a time
+	shareMu sync.Mutex      // one share change at a time; taken before mu
+	info    Info
+	ports   []int
+	quit    chan struct{}
+	once    sync.Once
 }
 
 func New(root paths.Root) *Host {
@@ -109,6 +112,7 @@ type Status struct {
 	Summary  string              `json:"summary"` // all, some, none (GUI-01)
 	Services []supervisor.Status `json:"services"`
 	Info     Info                `json:"info"`
+	Shares   []share.Share       `json:"shares"` // public share links (TOOL-04)
 }
 
 // Selection names services: "nginx", "php", or exact names such as
@@ -135,6 +139,7 @@ func (h *Host) Run(ctx context.Context) error {
 	}
 	defer ln.Close()
 	log.Printf("ebur host %s listening (pid %d, root %s)", Version, os.Getpid(), h.Root.Dir())
+	share.Clear(h.Root) // shares never outlive the host that made them (TOOL-04)
 	go ipc.Serve(ctx, ln, h.Handle)
 	watchCtx, stopWatch := context.WithCancel(ctx)
 	defer stopWatch()
@@ -182,6 +187,20 @@ func (h *Host) Handle(_ context.Context, method string, params json.RawMessage) 
 			return nil, fmt.Errorf("bad params: %w", err)
 		}
 		return h.SetActive(p)
+	case "share":
+		var r ShareRequest
+		if err := json.Unmarshal(params, &r); err != nil {
+			return nil, fmt.Errorf("bad params: %w", err)
+		}
+		return h.Share(r)
+	case "unshare":
+		var r ShareRequest
+		if err := json.Unmarshal(params, &r); err != nil {
+			return nil, fmt.Errorf("bad params: %w", err)
+		}
+		return h.Unshare(r.Site)
+	case "shares":
+		return h.Shares(), nil
 	case "shutdown":
 		h.once.Do(func() {
 			// Reply first, then quit.
@@ -196,7 +215,7 @@ func (h *Host) Status() Status {
 	h.mu.Lock()
 	info := h.info
 	h.mu.Unlock()
-	return Status{Summary: h.sup.Summary(), Services: h.sup.All(), Info: info}
+	return Status{Summary: h.sup.Summary(), Services: h.sup.All(), Info: info, Shares: h.Shares()}
 }
 
 func (h *Host) anyRunning() bool { return h.sup.Summary() != "none" }
@@ -353,7 +372,18 @@ func (h *Host) Start(sel Selection) (Status, error) {
 	return h.Status(), nil
 }
 
+// Stop stops the selection. Stopping the web server ends every share
+// (TOOL-04): a restarted tunnel would get a new address anyway. Shares
+// are ended after h.mu is released (Share takes shareMu, then h.mu).
 func (h *Host) Stop(sel Selection) (Status, error) {
+	st, err := h.stop(sel)
+	if len(sel.Services) == 0 || slices.Contains(sel.Services, "nginx") {
+		h.endAllShares()
+	}
+	return st, err
+}
+
+func (h *Host) stop(sel Selection) (Status, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	names, err := h.match(sel)

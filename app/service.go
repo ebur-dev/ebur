@@ -32,6 +32,7 @@ import (
 	"github.com/ebur-dev/ebur/core/provision"
 	"github.com/ebur-dev/ebur/core/runtimes"
 	"github.com/ebur-dev/ebur/core/setup"
+	"github.com/ebur-dev/ebur/core/share"
 	"github.com/ebur-dev/ebur/core/shellenv"
 	"github.com/ebur-dev/ebur/core/sites"
 	"github.com/ebur-dev/ebur/core/supervisor"
@@ -119,6 +120,7 @@ type Overview struct {
 	Adminer      bool            `json:"adminer"`
 	Mail         bool            `json:"mail"` // Mailpit installed (TOOL-03)
 	DBInstalled  bool            `json:"dbInstalled"`
+	ShareReady   bool            `json:"shareReady"` // cloudflared installed (TOOL-04)
 	TLD          string          `json:"tld"`
 	Root         string          `json:"root"`
 	Version      string          `json:"version"`
@@ -241,6 +243,33 @@ func (w lineWriter) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
+// ShareSite gives a site a public trycloudflare.com address for minutes
+// (TOOL-04), installing cloudflared first if needed (about 53 MB).
+func (a *App) ShareSite(site string, minutes int, password bool) (share.Share, error) {
+	if inst, _ := runtimes.Installed(a.root, "cloudflared"); len(inst) == 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+		defer cancel()
+		if _, err := install.Runtime(ctx, a.root, "cloudflared", "", nil, nil); err != nil {
+			return share.Share{}, withHint(err)
+		}
+	}
+	var st host.Status
+	if a.b.call("status", nil, &st) == nil && st.Summary == "none" {
+		if err := a.b.call("start", host.Selection{}, &st); err != nil {
+			return share.Share{}, withHint(err)
+		}
+	}
+	var sh share.Share
+	err := a.b.call("share", host.ShareRequest{Site: site, Minutes: minutes, Password: password}, &sh)
+	return sh, a.after(err)
+}
+
+// UnshareSite ends a share now.
+func (a *App) UnshareSite(site string) error {
+	var left []share.Share
+	return a.after(a.b.call("unshare", host.ShareRequest{Site: site}, &left))
+}
+
 // UnlinkSite stops serving a linked project; its files are not touched.
 func (a *App) UnlinkSite(name string) error {
 	return a.after(sites.Unlink(a.root.WWW(), name))
@@ -271,6 +300,11 @@ func (a *App) Overview() (Overview, error) {
 	ov.Mail = len(mail) > 0
 	db, _ := runtimes.Installed(a.root, "mariadb")
 	ov.DBInstalled = len(db) > 0
+	cf, _ := runtimes.Installed(a.root, "cloudflared")
+	ov.ShareReady = len(cf) > 0
+	if ov.Status.Shares == nil {
+		ov.Status.Shares = []share.Share{}
+	}
 	scheme := "http"
 	if ov.HTTPS {
 		scheme = "https"

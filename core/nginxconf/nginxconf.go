@@ -28,6 +28,10 @@ type Config struct {
 	// Mailpit (TOOL-03).
 	Proxies []Proxy
 
+	// Shares serve one site each on a private loopback port, for a
+	// Cloudflare quick tunnel (TOOL-04).
+	Shares []ShareServer
+
 	// HTTPS (SSL-02). Empty TLSListen means HTTP only.
 	TLSListen string             // e.g. "127.0.0.1:443"
 	TLS       map[string]TLSPair // host -> certificate files
@@ -40,6 +44,14 @@ type TLSPair struct{ Cert, Key string }
 
 // Proxy serves Host by forwarding to Target, e.g. "127.0.0.1:8025".
 type Proxy struct{ Host, Target string }
+
+// ShareServer serves Site on Listen (e.g. "127.0.0.1:8180") for a share
+// tunnel. Htpasswd, when set, asks visitors for a password.
+type ShareServer struct {
+	Site     sites.Site
+	Listen   string
+	Htpasswd string
+}
 
 func q(path string) string {
 	return `"` + strings.ReplaceAll(filepath.ToSlash(path), `"`, `\"`) + `"`
@@ -156,6 +168,48 @@ http {
         location ~ /\.(?!well-known) { deny all; }
     }
 `, c.Listen, tls, s.Host, q(s.DocRoot), params, c.upstreamFor(s))
+	}
+	for _, sh := range c.Shares {
+		auth := ""
+		if sh.Htpasswd != "" {
+			auth = fmt.Sprintf("        auth_basic \"Ebur share: %s\";\n        auth_basic_user_file %s;\n", sh.Site.Name, q(sh.Htpasswd))
+		}
+		// Only this site is reachable through the tunnel: the listener is
+		// loopback-only and serves nothing else. PHP is told the visit is
+		// HTTPS (Cloudflare ends TLS), so frameworks build https:// links
+		// to the share address; APP_DEBUG is forced off because Laravel and
+		// Symfony debug pages can show secrets to strangers; EBUR_SHARE
+		// lets the WordPress helper plugin recognise shared visits.
+		fmt.Fprintf(&b, `
+    # Share of %s (ebur share): only reached through its tunnel.
+    server {
+        listen %s;
+        server_name _;
+        root %s;
+        index index.php index.html index.htm;
+        charset utf-8;
+%s
+        location / {
+            try_files $uri $uri/ /index.php?$query_string;
+        }
+
+        location ~ \.php$ {
+            try_files $uri =404;
+            include %s;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_param HTTPS on;
+            fastcgi_param REQUEST_SCHEME https;
+            fastcgi_param SERVER_PORT 443;
+            fastcgi_param APP_DEBUG false;
+            fastcgi_param EBUR_SHARE 1;
+            fastcgi_next_upstream error timeout;
+            fastcgi_read_timeout 300s;
+            fastcgi_pass %s;
+        }
+
+        location ~ /\.(?!well-known) { deny all; }
+    }
+`, sh.Site.Name, sh.Listen, q(sh.Site.DocRoot), auth, params, c.upstreamFor(sh.Site))
 	}
 	for _, p := range c.Proxies {
 		fmt.Fprintf(&b, `

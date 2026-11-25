@@ -4,6 +4,27 @@
   let { ov, run } = $props()
   let creating = $state(false)
 
+  // Share links (TOOL-04).
+  let sharing = $state('') // site whose share options are open
+  let shareMinutes = $state(60)
+  let sharePassword = $state(false)
+  let copied = $state('')
+  const shareOf = (name) => ov.status.shares?.find((x) => x.site === name)
+  function startShare(name) {
+    const label = ov.shareReady ? `Opening a public link for ${name}…` : 'Downloading cloudflared (about 53 MB), then opening the link…'
+    sharing = ''
+    run(label, 'ShareSite', name, shareMinutes, sharePassword)
+  }
+  async function copy(text, what) {
+    await navigator.clipboard.writeText(text)
+    copied = what
+    setTimeout(() => (copied = ''), 1500)
+  }
+  function left(t) {
+    const m = Math.max(0, Math.round((new Date(t) - Date.now()) / 60000))
+    return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min left` : `${m} min left`
+  }
+
   const sourceText = { default: 'default', '.ebur': '.ebur file', 'composer.json': 'composer.json' }
 
   // "" means the default version: the site's php line is removed.
@@ -45,7 +66,33 @@
         {#each ov.sites as s}
           <tr>
             <td><strong>{s.name}</strong></td>
-            <td><button class="link" onclick={() => run('', 'OpenURL', s.url)}>{s.url}</button></td>
+            <td>
+              <button class="link" onclick={() => run('', 'OpenURL', s.url)}>{s.url}</button>
+              {#if shareOf(s.name)}
+                {@const sh = shareOf(s.name)}
+                <div class="share">
+                  <span class="pub">Public:</span>
+                  <button class="link" onclick={() => run('', 'OpenURL', sh.url)}>{sh.url.replace('https://', '')}</button>
+                  <button class="link small" onclick={() => copy(sh.url + (sh.password ? `\nUser: ${sh.user}  Password: ${sh.password}` : ''), sh.site)}>{copied === sh.site ? 'Copied' : 'Copy'}</button>
+                  <button class="link small" onclick={() => run(`Ending the share of ${sh.site}…`, 'UnshareSite', sh.site)}>Stop</button>
+                  <div class="muted small">{left(sh.expires)}{sh.password ? ` · user ${sh.user}, password ${sh.password}` : ''}</div>
+                </div>
+              {:else if sharing === s.name}
+                <div class="share-opts">
+                  <label>For
+                    <select bind:value={shareMinutes}>
+                      <option value={30}>30 minutes</option><option value={60}>1 hour</option><option value={180}>3 hours</option><option value={480}>8 hours</option>
+                    </select>
+                  </label>
+                  <label><input type="checkbox" bind:checked={sharePassword} /> Ask for a password</label>
+                  <p class="muted small">Anyone with the link can open <strong>{s.name}</strong> (only this site) until it ends. Traffic passes through Cloudflare; debug pages are off for visitors.{ov.shareReady ? '' : ' The first share downloads cloudflared (about 53 MB).'}</p>
+                  <button class="primary" onclick={() => startShare(s.name)}>Share</button>
+                  <button onclick={() => (sharing = '')}>Cancel</button>
+                </div>
+              {:else if s.running}
+                <button class="link small" onclick={() => { sharing = s.name; shareMinutes = 60; sharePassword = false }} title="Give this site a temporary public address">Share…</button>
+              {/if}
+            </td>
             <td>
               <select value={pinned(s)} onchange={(e) => choose(s, e.currentTarget.value)} title="PHP version for this site">
                 <option value="">{autoLabel(s)}</option>
@@ -103,6 +150,11 @@
   .problem { font-size: 12px; color: var(--gold); margin-top: 3px; max-width: 260px; }
   .note { font-size: 13px; margin-top: 10px; }
   .linked { font-family: var(--font-ui); color: var(--accent); }
+  .share { margin-top: 4px; font-size: 13px; }
+  .share .pub { color: var(--green); font-weight: 600; }
+  .share-opts { margin-top: 6px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; display: grid; gap: 6px; max-width: 340px; }
+  .share-opts label { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+  .share-opts p { margin: 0; }
   .small { font-size: 12px; font-family: var(--font-ui); }
   select { font-size: 13px; padding: 3px 6px; }
 </style>

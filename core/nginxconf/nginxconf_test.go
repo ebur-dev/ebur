@@ -84,6 +84,42 @@ func TestRenderPerSitePHP(t *testing.T) {
 	}
 }
 
+// TOOL-04: a share serves one site on a private loopback port, tells PHP
+// the visit is HTTPS through a share, and forces debug pages off.
+func TestRenderShare(t *testing.T) {
+	shop := sites.Site{Name: "shop", Host: "shop.test", DocRoot: `C:\e\www\shop\public`}
+	shop.PHP.Version = "8.4.1"
+	out := Render(Config{
+		NginxDir: `C:\e\bin\nginx`, LogDir: `C:\e\logs`, TempDir: `C:\e\tmp`, PIDFile: `C:\e\n.pid`,
+		Listen: "127.0.0.1:80",
+		Pools:  []php.Pool{{Version: "8.5.13", BasePort: 9100, Size: 1}, {Version: "8.4.1", BasePort: 9110, Size: 1}},
+		Sites:  []sites.Site{shop},
+		Shares: []ShareServer{
+			{Site: shop, Listen: "127.0.0.1:8180"},
+			{Site: shop, Listen: "127.0.0.1:8181", Htpasswd: `C:\e\data\share-shop.htpasswd`},
+		},
+	})
+	for _, want := range []string{
+		"listen 127.0.0.1:8180;",
+		`root "C:/e/www/shop/public";`,
+		"fastcgi_param HTTPS on;",
+		"fastcgi_param APP_DEBUG false;",
+		"fastcgi_param EBUR_SHARE 1;",
+		"fastcgi_pass php-8_4_1;",
+		`auth_basic_user_file "C:/e/data/share-shop.htpasswd";`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Count(out, "auth_basic_user_file") != 1 {
+		t.Error("password applied to the wrong share")
+	}
+	if strings.Contains(out, "listen 0.0.0.0") || strings.Count(out, "{") != strings.Count(out, "}") {
+		t.Error("share must listen on loopback only, braces balanced")
+	}
+}
+
 // TOOL-03: mail.test forwards to Mailpit's UI, with WebSocket support.
 func TestRenderProxy(t *testing.T) {
 	out := Render(Config{

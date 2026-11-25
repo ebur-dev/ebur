@@ -143,6 +143,16 @@
         "notes": "TOOL-03 mail capture; sha256 from the GitHub release digest; 1.34.0 fixes GHSA-v887-64wg-qqc9 (SMTP crash)"
       }
     ],
+    "cloudflared": [
+      {
+        "version": "2026.11.1",
+        "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-windows-amd64.exe",
+        "sha256": "341deda3db5ec498a0482254d6c38c0b7cf01a30c37bb5dd95d2216d08955e35",
+        "file": "cloudflared.exe",
+        "arch": "x64",
+        "notes": "TOOL-04 share links (quick tunnels); sha256 from the GitHub release digest; newer than the 14-day rule because it fixes VULN-187395 and lets quick tunnels fall back to HTTP/2"
+      }
+    ],
     "composer": [
       {
         "version": "2.11.3",

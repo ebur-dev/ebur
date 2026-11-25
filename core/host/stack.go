@@ -296,6 +296,12 @@ func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 		Pools:    pools,
 		Proxies:  proxies,
 	}
+	shareSpecs, shareServers, err := shareParts(root, cfg, found)
+	if err != nil {
+		return Stack{}, err
+	}
+	specs = append(specs, shareSpecs...)
+	nc.Shares = shareServers
 	tlsHosts := make([]string, 0, len(served)+len(proxies))
 	for _, s := range served {
 		tlsHosts = append(tlsHosts, s.Host)
