@@ -137,7 +137,7 @@ The MVP needs 23 Must requirements across runtimes, services, sites and the two 
 | SITE-02 | The system shall add and remove hosts-file entries through a small elevated helper, prompting once per change batch. If another process locks the file, the helper shall retry, then name the locking process and explain how to allow Ebur. The helper accepts only names ending in `.test` or `.localhost`, always maps them to 127.0.0.1, and edits only the `# ebur begin` / `# ebur end` block. After an automatic attempt is declined or blocked, starts do not prompt again for the same names. | Must | MVP |
 | SITE-03 | The system shall detect a site's document root (`public\`, `web\` or the folder itself). | Must | MVP |
 | SITE-04 | The user shall be able to change the TLD (default `.test`) and add custom domains per site. Needs a design for the elevated helper, which only accepts `.test` and `.localhost` so it cannot be used to redirect real sites; and the local CA is name-constrained to the TLD, so a TLD change means a new CA. | Should | v1 |
-| SITE-05 | The system shall watch `www\` and apply new or removed sites without a restart. | Should | v1 |
+| SITE-05 | The system shall watch `www\` and apply new or removed sites without a restart. Implemented Nov 25, 2026: also reacts to a new `public\` folder and to `.ebur` and `composer.json` changes; Nginx reloads gracefully, only affected PHP pools start or stop (each version keeps a fixed port block), unused pools retire after a grace period, and MariaDB is never restarted. | Should | v1 |
 
 ### 3.5 Local HTTPS (SSL)
 
@@ -290,7 +290,7 @@ Ebur's selling point is being light: under 20 MB to download, under 60 MB of RAM
 | NFR-02 | Footprint | Idle memory (working set, as Task Manager shows it) of tray app with the GUI closed. Closing the window must release the WebView2 instance, not just hide it | ≤ 60 MB |
 | NFR-03 | Performance | Cold start of all MVP services on an SSD, excluding first-run database initialisation | ≤ 3 s |
 | NFR-04 | Performance | Global PHP version switch, including restart | ≤ 5 s |
-| NFR-05 | Performance | New site reachable after folder creation (v1 watcher), excluding time spent on the hosts-file admin prompt | ≤ 2 s |
+| NFR-05 | Performance | New site reachable after folder creation (v1 watcher), excluding time spent on the hosts-file admin prompt. Measured Nov 25, 2026: new site 1.2–1.4 s; pinning or unpinning a site's PHP 1.2–1.6 s, with no failed or hanging requests | ≤ 2 s |
 | NFR-06 | Security | Every downloaded runtime verified against SHA-256 before extraction | 100% of downloads |
 | NFR-07 | Security | Services bind to 127.0.0.1 unless the user enables LAN access | Default on |
 | NFR-08 | Security | Elevation limited to a separate helper for hosts-file changes | No elevated main process |

@@ -24,7 +24,8 @@ everything in one folder.
 ## What it does today
 
 - **Sites:** every folder in `www\` is served at `<folder>.test`; Laravel and
-  Symfony `public\` folders are detected.
+  Symfony `public\` folders are detected. New or removed folders, and changes
+  to a site's PHP version, apply within about two seconds, without a restart.
 - **PHP 8.2 to 8.6, per project:** each site can run its own PHP version at
   the same time, chosen by a `.ebur` file (`php: "8.3"`) or the PHP
   requirement in its `composer.json`; everything else uses the default,

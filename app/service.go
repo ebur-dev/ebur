@@ -46,6 +46,39 @@ type App struct {
 
 	setupMu      sync.Mutex
 	setupRunning bool
+
+	hostsMu   sync.Mutex
+	lastSites string // site names last seen, to notice new ones (SITE-05)
+	hostsBusy bool
+}
+
+// noticeSites runs on every tray refresh. When the host's watcher has
+// brought in new sites while services run, it maps their names with one
+// administrator prompt (SITE-02, SITE-05). The first call only records
+// the current names, so opening Ebur never prompts by itself.
+func (a *App) noticeSites(ov Overview) {
+	var names []string
+	for _, s := range ov.Sites {
+		names = append(names, s.Name)
+	}
+	key := strings.Join(names, ",")
+	a.hostsMu.Lock()
+	first, changed := a.lastSites == "", key != a.lastSites
+	a.lastSites = key
+	if first || !changed || a.hostsBusy || ov.Status.Summary == "none" {
+		a.hostsMu.Unlock()
+		return
+	}
+	if cfg, _ := config.Load(a.root.Config()); cfg.ManualHosts {
+		a.hostsMu.Unlock()
+		return
+	}
+	a.hostsBusy = true
+	a.hostsMu.Unlock()
+	go func() {
+		defer func() { a.hostsMu.Lock(); a.hostsBusy = false; a.hostsMu.Unlock() }()
+		a.syncHosts(true) // AutoSync: no repeat prompt for names already declined
+	}()
 }
 
 func withHint(err error) error {

@@ -58,6 +58,7 @@ func (t *tray) refresh() {
 	if err != nil {
 		return
 	}
+	t.svc.noticeSites(ov) // new sites from the watcher: map their names
 	summary := ov.Status.Summary
 	sig := fmt.Sprintf("%s|%s|%v|%v|%v", summary, ov.PHPActive, ov.PHPInstalled, siteURLs(ov), ov.Adminer)
 	t.mu.Lock()

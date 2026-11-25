@@ -58,6 +58,21 @@ func activeOrNewest(root paths.Root, cfg config.Settings, runtime string) (strin
 	return installed[0], nil
 }
 
+// poolPort gives each installed PHP version a fixed block of ports, by
+// its place among installed versions, oldest first. A pool's ports must
+// not depend on which other versions are running: when a site pinned a
+// new version, positional ports shifted the other pools and the reload
+// restarted them, briefly interrupting unrelated sites (SITE-05).
+func poolPort(installedNewestFirst []string, version string, size int) int {
+	n := len(installedNewestFirst)
+	for i, v := range installedNewestFirst {
+		if v == version {
+			return phpBasePort + (n-1-i)*size // oldest gets the first block
+		}
+	}
+	return phpBasePort + n*size // not installed (should not happen): after all others
+}
+
 // optional is activeOrNewest for runtimes the stack can run without
 // (MariaDB, Adminer): it returns "" when none is installed.
 func optional(root paths.Root, cfg config.Settings, runtime string) (string, error) {
@@ -144,8 +159,8 @@ func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 	var pools []php.Pool
 	var scanDirs []string
 	ports := []int{httpPort}
-	port := phpBasePort
 	for _, v := range project.Versions(phpVer, choices) {
+		port := poolPort(phpInstalled, v, cfg.PHPPoolSize)
 		dir := root.RuntimeDir("php", v)
 		ini, err := php.EnsureINI(root.Etc(), dir, v, filepath.Join(root.Data(), "tmp"))
 		if err != nil {
@@ -164,7 +179,6 @@ func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 		pools = append(pools, pool)
 		scanDirs = append(scanDirs, scanDir)
 		ports = append(ports, pool.Ports()...)
-		port += cfg.PHPPoolSize
 	}
 	info := Info{PHP: phpVer, Nginx: nginxVer, Sites: found, Skipped: skipped}
 	for _, p := range pools {
@@ -244,7 +258,13 @@ func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 	})
 
 	info.Listen = listen
-	return Stack{Specs: specs, Ports: ports, Info: info}, nil
+	reload := func(ctx context.Context) error {
+		cmd := exec.CommandContext(ctx, nginxExe, append(nginxArgs, "-s", "reload")...)
+		cmd.Dir = nginxDir
+		proc.Hide(cmd)
+		return cmd.Run()
+	}
+	return Stack{Specs: specs, Ports: ports, Info: info, Reload: reload}, nil
 }
 
 // setupTLS enables HTTPS once the user has created the local CA with

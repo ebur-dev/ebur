@@ -132,6 +132,32 @@ func (s *Supervisor) Clear() {
 	}
 }
 
+// Remove forgets one service, which must not be running.
+func (s *Supervisor) Remove(name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	sv, ok := s.svcs[name]
+	if !ok {
+		return nil
+	}
+	if sv.state == Running || sv.state == Restarting {
+		return fmt.Errorf("supervisor: %s is still running", name)
+	}
+	delete(s.svcs, name)
+	return nil
+}
+
+// Spec returns a service's spec, for comparing with a rebuilt one.
+func (s *Supervisor) Spec(name string) (Spec, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	sv, ok := s.svcs[name]
+	if !ok {
+		return Spec{}, false
+	}
+	return sv.spec, true
+}
+
 // Start launches a service. Starting a running service does nothing.
 // An error is returned if the first launch fails (e.g. missing binary).
 func (s *Supervisor) Start(name string) error {

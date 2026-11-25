@@ -34,6 +34,9 @@ type Stack struct {
 	Specs []supervisor.Spec
 	Ports []int // must be free before the stack starts
 	Info  Info
+	// Reload tells the running web server to re-read its config without
+	// dropping connections (SITE-05). Nil if not supported.
+	Reload func(ctx context.Context) error
 }
 
 // Info describes the running configuration for status displays.
@@ -63,24 +66,33 @@ type Host struct {
 	// accept connections. The first run after an install can take many
 	// seconds while antivirus scans the new binaries.
 	ReadyTimeout time.Duration
+	// WatchInterval is how often www\ is checked for site changes
+	// (SITE-05). Zero disables the watcher.
+	WatchInterval time.Duration
+	// RetireGrace is how long a pool no site uses keeps running after a
+	// reload, so Nginx's old worker can finish requests sent to it.
+	RetireGrace time.Duration
 
-	sup   *supervisor.Supervisor
-	mu    sync.Mutex // one start/stop/restart at a time
-	info  Info
-	ports []int
-	quit  chan struct{}
-	once  sync.Once
+	sup    *supervisor.Supervisor
+	wanted map[string]bool // services the latest stack needs (see Reload)
+	mu     sync.Mutex      // one start/stop/restart at a time
+	info   Info
+	ports  []int
+	quit   chan struct{}
+	once   sync.Once
 }
 
 func New(root paths.Root) *Host {
 	return &Host{
-		Root:         root,
-		Build:        BuildStack,
-		StopTimeout:  10 * time.Second,
-		Settle:       300 * time.Millisecond,
-		ReadyTimeout: 45 * time.Second,
-		sup:          supervisor.New(),
-		quit:         make(chan struct{}),
+		Root:          root,
+		Build:         BuildStack,
+		StopTimeout:   10 * time.Second,
+		Settle:        300 * time.Millisecond,
+		ReadyTimeout:  45 * time.Second,
+		WatchInterval: 300 * time.Millisecond, // change seen within ~0.6 s (NFR-05: site live in 2 s)
+		RetireGrace:   5 * time.Second,
+		sup:           supervisor.New(),
+		quit:          make(chan struct{}),
 	}
 }
 
@@ -123,6 +135,9 @@ func (h *Host) Run(ctx context.Context) error {
 	defer ln.Close()
 	log.Printf("ebur host %s listening (pid %d, root %s)", Version, os.Getpid(), h.Root.Dir())
 	go ipc.Serve(ctx, ln, h.Handle)
+	watchCtx, stopWatch := context.WithCancel(ctx)
+	defer stopWatch()
+	go h.watch(watchCtx) // SITE-05
 
 	if cfg, err := config.Load(h.Root.Config()); err == nil && len(cfg.AutoStart) > 0 { // SVC-06
 		if _, err := h.Start(Selection{Services: cfg.AutoStart}); err != nil {
@@ -212,6 +227,12 @@ func (h *Host) rebuild() error {
 	}
 	h.info = st.Info
 	h.ports = st.Ports
+	// A delayed retire from an earlier reload must not stop what this
+	// stack needs.
+	h.wanted = map[string]bool{}
+	for _, s := range st.Specs {
+		h.wanted[s.Name] = true
+	}
 	return nil
 }
 
