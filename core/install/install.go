@@ -77,7 +77,7 @@ func Runtime(ctx context.Context, root paths.Root, name, want string, progress r
 		return res, err
 	}
 	if !contains(installed, rel.Version) {
-		in := &runtimes.Installer{Root: root}
+		in := &runtimes.Installer{Root: root, Say: say} // RUN-05: resume and retry notices
 		if _, err := in.Install(ctx, name, rel, progress); err != nil {
 			return res, err
 		}

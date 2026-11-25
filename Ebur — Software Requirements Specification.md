@@ -103,7 +103,7 @@ The MVP needs 23 Must requirements across runtimes, services, sites and the two 
 | RUN-02 | The system shall download a runtime zip from its official source and verify its SHA-256 checksum before extracting. | Must | MVP |
 | RUN-03 | The system shall extract each runtime to `bin\<runtime>\<version>\` without touching system folders. | Must | MVP |
 | RUN-04 | The system shall remove an installed version on request, refusing if a running site uses it. | Must | MVP |
-| RUN-05 | The system shall show download progress and resume interrupted downloads. | Should | v1 |
+| RUN-05 | The system shall show download progress and resume interrupted downloads. Implemented Nov 25, 2026: a download writes to `data\downloads\<runtime>-<version>.zip.part` with a note naming its URL and SHA-256; a dropped connection is retried up to 3 times within the install (2, 4, 6 s apart) and resumed with an HTTP Range request, and a later install (after Ctrl+C, a crash or a reboot) resumes the same file. A partial from another release is discarded; a server that ignores ranges restarts cleanly; "not found" and full-disk errors are not retried. The whole file is still SHA-256-checked before anything is installed, and a file that fails is deleted. Verified live: a 248 MB MySQL download killed at 74 MB resumed from 74 MB. | Should | v1 |
 | RUN-06 | The system shall let users add a runtime from a local zip or folder. | Could | v1 |
 
 ### 3.2 PHP management (PHP)

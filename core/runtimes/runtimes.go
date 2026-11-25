@@ -9,8 +9,6 @@ package runtimes
 import (
 	"archive/zip"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -38,6 +36,8 @@ type Progress func(done, total int64)
 type Installer struct {
 	Root   paths.Root
 	Client *http.Client // nil means http.DefaultClient
+	// Say reports resumes and retries (RUN-05); nil means silent.
+	Say func(string)
 }
 
 // Install downloads rel and installs it as runtime. It returns the
@@ -54,11 +54,13 @@ func (in *Installer) Install(ctx context.Context, runtime string, rel manifest.R
 		return "", err
 	}
 	zipPath := filepath.Join(in.Root.Downloads(), fmt.Sprintf("%s-%s.zip.part", runtime, rel.Version))
-	defer os.Remove(zipPath)
-
+	// RUN-05: an interrupted download keeps its .part file, so the next
+	// attempt resumes; it goes only once the install is done (or the file
+	// failed its checksum, in which case download already removed it).
 	if err := in.download(ctx, rel, zipPath, progress); err != nil {
 		return "", err
 	}
+	defer removePart(zipPath)
 
 	staging := filepath.Join(in.Root.Bin(), runtime, "."+rel.Version+".partial")
 	os.RemoveAll(staging) // leftover from a crashed install
@@ -80,48 +82,6 @@ func (in *Installer) Install(ctx context.Context, runtime string, rel manifest.R
 		return "", err
 	}
 	return dest, nil
-}
-
-func (in *Installer) download(ctx context.Context, rel manifest.Release, to string, progress Progress) error {
-	client := in.Client
-	if client == nil {
-		client = http.DefaultClient
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rel.URL, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("User-Agent", "ebur-runtime-manager")
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("download %s: %w", rel.URL, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download %s: server returned %s", rel.URL, resp.Status)
-	}
-	f, err := os.Create(to)
-	if err != nil {
-		return err
-	}
-	h := sha256.New()
-	var src io.Reader = resp.Body
-	if progress != nil {
-		src = &progressReader{r: resp.Body, total: resp.ContentLength, fn: progress}
-	}
-	_, copyErr := io.Copy(io.MultiWriter(f, h), src)
-	closeErr := f.Close()
-	if copyErr != nil {
-		return fmt.Errorf("download %s: %w", rel.URL, copyErr)
-	}
-	if closeErr != nil {
-		return closeErr
-	}
-	if got := hex.EncodeToString(h.Sum(nil)); got != rel.SHA256 {
-		return fmt.Errorf("%w for %s: expected %s, got %s; the file was deleted and nothing was installed",
-			ErrChecksum, path.Base(rel.URL), rel.SHA256, got)
-	}
-	return nil
 }
 
 type progressReader struct {
