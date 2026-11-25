@@ -12,6 +12,14 @@ export async function call(method, ...args) {
   return r.Call.ByName('main.App.' + method, ...args)
 }
 
+// on listens for an event emitted by the Go side and returns a function
+// that stops listening.
+export async function on(name, callback) {
+  const r = await rt()
+  // Go's Emit(name, value) delivers value itself as ev.data.
+  return r.Events.On(name, (ev) => callback(ev?.data))
+}
+
 // errorText turns a rejected call into a readable message. Go errors
 // arrive as "message\nNext step: hint" (NFR-14).
 export function errorText(err) {

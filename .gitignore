@@ -5,8 +5,8 @@
 app/frontend/node_modules/
 app/frontend/dist/
 
-# Local development root (EBUR_ROOT=.devroot)
-.devroot/
+# Local development roots (EBUR_ROOT=.devroot, .devroot-fresh, ...)
+.devroot*/
 
 # Downloaded runtimes and generated spike state
 spikes/runtimes/

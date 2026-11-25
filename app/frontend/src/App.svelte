@@ -6,6 +6,7 @@
   import Logs from './Logs.svelte'
   import Health from './Health.svelte'
   import Settings from './Settings.svelte'
+  import Setup from './Setup.svelte'
   import icon from '../../icon/ebur-256.png'
 
   const tabs = ['Sites', 'Services', 'Logs', 'Health', 'Settings']
@@ -15,6 +16,12 @@
   let ov = $state(null)
   let busy = $state('')
   let error = $state('')
+  // The wizard stays up until the user leaves its last page, even though
+  // needsSetup turns false as soon as setup has installed PHP.
+  let inSetup = $state(false)
+  $effect(() => {
+    if (ov?.needsSetup) inSetup = true
+  })
 
   async function refresh() {
     try {
@@ -45,6 +52,9 @@
   })
 </script>
 
+{#if inSetup}
+  <Setup onfinish={() => { inSetup = false; refresh() }} />
+{:else}
 <div class="shell">
   <header>
     <div class="brand">
@@ -105,6 +115,7 @@
     {/if}
   </main>
 </div>
+{/if}
 
 <style>
   .shell { display: flex; flex-direction: column; height: 100%; }

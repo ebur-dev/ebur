@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -25,6 +26,7 @@ import (
 	"github.com/ebur/ebur/core/install"
 	"github.com/ebur/ebur/core/paths"
 	"github.com/ebur/ebur/core/runtimes"
+	"github.com/ebur/ebur/core/setup"
 	"github.com/ebur/ebur/core/shellenv"
 	"github.com/ebur/ebur/core/sites"
 	"github.com/ebur/ebur/core/supervisor"
@@ -40,6 +42,9 @@ type App struct {
 	// applyTheme recolours the open window's title bar.
 	applyTheme func(mode string)
 	hostsNote  string // why the last hosts sync failed, for the Hosts card
+
+	setupMu      sync.Mutex
+	setupRunning bool
 }
 
 func withHint(err error) error {
@@ -72,6 +77,7 @@ type Overview struct {
 	TLD          string          `json:"tld"`
 	Root         string          `json:"root"`
 	Version      string          `json:"version"`
+	NeedsSetup   bool            `json:"needsSetup"` // show the first-run wizard
 }
 
 // SiteRow is a site as the Sites tab and tray menu show it (GUI-03).
@@ -92,7 +98,7 @@ func (a *App) Overview() (Overview, error) {
 	if err := a.b.call("status", nil, &st); err != nil {
 		st = host.Status{Summary: "none"}
 	}
-	ov := Overview{Status: st, TLD: cfg.TLD, Root: a.root.Dir(), Version: version}
+	ov := Overview{Status: st, TLD: cfg.TLD, Root: a.root.Dir(), Version: version, NeedsSetup: setup.NeedsSetup(a.root)}
 	ov.PHPInstalled, _ = runtimes.Installed(a.root, "php")
 	ov.PHPActive = cfg.Active["php"]
 	if ov.PHPActive == "" && len(ov.PHPInstalled) > 0 {
@@ -418,6 +424,66 @@ func (a *App) DisableHTTPS() (SSLInfo, error) {
 	}
 	a.restartIfRunning()
 	return a.SSL(), a.after(nil)
+}
+
+// SetupOptions is what the first-run wizard offers (SRS §4.1).
+func (a *App) SetupOptions() (setup.Options, error) {
+	o, err := setup.GetOptions(a.root)
+	return o, withHint(err)
+}
+
+// SetupResult is sent with the "setup:finished" event.
+type SetupResult struct {
+	OK    bool     `json:"ok"`
+	Notes []string `json:"notes"` // optional steps that did not complete
+	Error string   `json:"error"` // why setup stopped, if it did
+}
+
+// RunSetup starts the first-run setup in the background. Progress
+// arrives as "setup:progress" events (the step list) and the end as one
+// "setup:finished" event.
+func (a *App) RunSetup(c setup.Choices) error {
+	a.setupMu.Lock()
+	if a.setupRunning {
+		a.setupMu.Unlock()
+		return errors.New("setup is already running")
+	}
+	a.setupRunning = true
+	a.setupMu.Unlock()
+
+	go func() {
+		defer func() {
+			a.setupMu.Lock()
+			a.setupRunning = false
+			a.setupMu.Unlock()
+		}()
+		hooks := setup.Hooks{
+			Start: func() error {
+				var st host.Status
+				return withHint(a.b.call("start", host.Selection{}, &st))
+			},
+			Hosts: func() error {
+				_, err := a.syncHosts(true)
+				return err
+			},
+		}
+		err := setup.Run(context.Background(), a.root, c, hooks, func(steps []setup.Step) {
+			a.app.Event.Emit("setup:progress", steps)
+		})
+		res := SetupResult{OK: err == nil, Notes: []string{}}
+		var partial *setup.Partial
+		switch {
+		case errors.As(err, &partial):
+			res.OK, res.Notes = true, partial.Notes
+		case err != nil:
+			res.Error = withHint(err).Error()
+		}
+		a.app.Event.Emit("setup:finished", res)
+		if a.changed != nil {
+			a.changed()
+		}
+	}()
+	return nil
 }
 
 // Appearance returns "system", "light" or "dark" (GUI-05).

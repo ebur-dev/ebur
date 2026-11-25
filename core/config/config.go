@@ -28,6 +28,9 @@ type Settings struct {
 	TLD string `json:"tld"`
 	// ManifestURL is where the runtime manifest is fetched from.
 	ManifestURL string `json:"manifest_url,omitempty"`
+	// SetupDone is set when the first-run setup has finished, so the
+	// window stops showing the wizard.
+	SetupDone bool `json:"setup_done,omitempty"`
 	// ManualHosts stops Ebur from updating the hosts file after a start;
 	// `ebur hosts sync` still works (SITE-02).
 	ManualHosts bool `json:"manual_hosts,omitempty"`
