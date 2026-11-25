@@ -95,5 +95,6 @@ func dbCmd() *cobra.Command {
 			return nil
 		},
 	})
+	c.AddCommand(snapshotCmds()...)
 	return c
 }

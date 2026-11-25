@@ -19,6 +19,8 @@ import (
 
 	"github.com/ebur-dev/ebur/core/certs"
 	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/dbclient"
+	"github.com/ebur-dev/ebur/core/dbsnap"
 	"github.com/ebur-dev/ebur/core/doctor"
 	"github.com/ebur-dev/ebur/core/host"
 	"github.com/ebur-dev/ebur/core/hostsfile"
@@ -679,6 +681,107 @@ func (a *App) RemoveNode(version string) (NodeInfo, error) {
 		config.Save(a.root.Config(), cfg)
 	}
 	return a.Node(), a.after(nil)
+}
+
+// DBRow is one database on the Databases tab (TOOL-05).
+type DBRow struct {
+	Name      string            `json:"name"`
+	Tables    int               `json:"tables"`
+	Bytes     int64             `json:"bytes"`
+	Sites     []string          `json:"sites"`
+	Snapshots []dbsnap.Snapshot `json:"snapshots"`
+}
+
+// DBList is the Databases tab: databases, or why they cannot be listed.
+type DBList struct {
+	Installed bool    `json:"installed"`
+	Running   bool    `json:"running"`
+	Databases []DBRow `json:"databases"`
+	Folder    string  `json:"folder"`
+}
+
+func (a *App) Databases() DBList {
+	out := DBList{Databases: []DBRow{}, Folder: dbsnap.Dir(a.root)}
+	c, err := dbclient.Open(a.root)
+	if err != nil {
+		return out
+	}
+	out.Installed = true
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	dbs, err := c.Databases(ctx)
+	if err != nil {
+		return out
+	}
+	out.Running = true
+	cfg, _ := config.Load(a.root.Config())
+	found, _, _ := sites.Scan(a.root.WWW(), cfg.TLD)
+	siteOf := map[string][]string{}
+	for _, s := range found {
+		db, _ := dbsnap.SiteDatabase(s.Dir, s.Name)
+		siteOf[db] = append(siteOf[db], s.Name)
+	}
+	snaps, _ := dbsnap.List(a.root, "")
+	for _, d := range dbs {
+		row := DBRow{Name: d.Name, Tables: d.Tables, Bytes: d.Bytes, Sites: siteOf[d.Name], Snapshots: []dbsnap.Snapshot{}}
+		if row.Sites == nil {
+			row.Sites = []string{}
+		}
+		for _, s := range snaps {
+			if s.Database == d.Name {
+				row.Snapshots = append(row.Snapshots, s)
+			}
+		}
+		out.Databases = append(out.Databases, row)
+	}
+	return out
+}
+
+func (a *App) dbClient() (*dbclient.Client, error) {
+	c, err := dbclient.Open(a.root)
+	if err != nil {
+		return nil, withHint(err)
+	}
+	return c, nil
+}
+
+// SnapshotDB saves a snapshot of db with an optional label.
+func (a *App) SnapshotDB(db, label string) (dbsnap.Snapshot, error) {
+	c, err := a.dbClient()
+	if err != nil {
+		return dbsnap.Snapshot{}, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	s, err := dbsnap.Save(ctx, c, a.root, db, label)
+	return s, withHint(err)
+}
+
+// RestoreDB replaces db with a snapshot; the current data is saved first.
+func (a *App) RestoreDB(db, name string) (dbsnap.RestoreResult, error) {
+	c, err := a.dbClient()
+	if err != nil {
+		return dbsnap.RestoreResult{}, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	res, err := dbsnap.Restore(ctx, c, a.root, db, name)
+	return res, withHint(err)
+}
+
+// DeleteSnapshot removes one snapshot file; the database is not touched.
+func (a *App) DeleteSnapshot(db, name string) error {
+	_, err := dbsnap.Delete(a.root, db, name)
+	return withHint(err)
+}
+
+// OpenSnapshots opens the snapshots folder in Explorer.
+func (a *App) OpenSnapshots() error {
+	dir := dbsnap.Dir(a.root)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	return openFolder(dir)
 }
 
 // SSLInfo is what the HTTPS panel shows.

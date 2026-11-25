@@ -126,7 +126,7 @@ func Create(ctx context.Context, root paths.Root, o Options, say func(string), o
 	}
 	var db *database
 	if o.Kind.usesDatabase() {
-		if db, err = openDatabase(root, cfg); err != nil {
+		if db, err = openDatabase(root); err != nil {
 			return Result{}, err
 		}
 		if err := db.ping(ctx); err != nil {

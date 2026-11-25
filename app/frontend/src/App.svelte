@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { call, errorText } from './api.js'
   import Sites from './Sites.svelte'
+  import Databases from './Databases.svelte'
   import Services from './Services.svelte'
   import Logs from './Logs.svelte'
   import Health from './Health.svelte'
@@ -9,7 +10,7 @@
   import Setup from './Setup.svelte'
   import icon from '../../icon/ebur-256.png'
 
-  const tabs = ['Sites', 'Services', 'Logs', 'Health', 'Settings']
+  const tabs = ['Sites', 'Databases', 'Services', 'Logs', 'Health', 'Settings']
   const summaryText = { all: 'All services running', some: 'Some services running', none: 'Services stopped' }
 
   let tab = $state('Sites')
@@ -104,6 +105,8 @@
       <p class="muted">Loading…</p>
     {:else if tab === 'Sites'}
       <Sites {ov} {run} />
+    {:else if tab === 'Databases'}
+      <Databases {ov} {run} />
     {:else if tab === 'Services'}
       <Services {ov} {run} {busy} />
     {:else if tab === 'Logs'}
