@@ -22,9 +22,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ebur/ebur/core/manifest"
-	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/internal/fsutil"
+	"github.com/ebur-dev/ebur/core/manifest"
+	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/internal/fsutil"
 )
 
 var (

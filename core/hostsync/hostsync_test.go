@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 func TestWanted(t *testing.T) {

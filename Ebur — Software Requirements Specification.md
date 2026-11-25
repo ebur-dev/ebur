@@ -81,7 +81,7 @@ Ebur is a standalone desktop application. It does not compile PHP or servers its
 ### 2.4 Design constraints
 
 - Core and CLI written in Go; GUI built with Wails using the system webview.
-- Licence: MIT, compatible with redistributing the bundled tools under their own licences.
+- Licence: MIT (decided), compatible with redistributing the bundled tools under their own licences. Repository: `github.com/ebur-dev/ebur`.
 - The product name and binaries shall not use the word "PHP" (PHP licence naming restriction).
 - No writes to the Windows registry or system `PATH`; only the hosts file needs elevation. One deliberate exception: the installer writes the standard per-user uninstall entry (HKCU) so Ebur appears in Settings > Apps; the portable zip writes nothing. The local CA goes into the current user's certificate store, which needs no admin rights but shows its own Windows confirmation dialog.
 
@@ -398,8 +398,8 @@ The biggest risk is per-project PHP on Windows, where PHP-FPM is not native; it 
 | Port 80/443 taken by IIS, Skype or another stack | Sites fail to load | `ebur doctor` names the process; fallback ports 8080/8443 |
 | Single maintainer burnout | Project stalls | Clear module ownership, good-first-issue labels, contributor guide from day one |
 
-- [ ] Final licence: MIT, or Apache-2.0 for its patent grant?
-- [ ] Repo and domain: confirm `github.com/ebur` (or fallback) and `ebur.dev` availability.
+- [x] Final licence: MIT (decided Nov 25, 2026). Matches the PHP ecosystem (Laravel, Symfony, Composer); all built-in libraries (MIT, Apache-2.0, BSD) are compatible. Copyright line: "Ebur contributors".
+- [x] Repo and domain: `github.com/ebur` is taken (a personal account), so the project uses `github.com/ebur-dev/ebur`, which is also the Go module path. `ebur.dev` showed no registration on Nov 25, 2026; register it to secure it.
 - [x] Default web server for new installs: Nginx (MVP ships Nginx only; Apache arrives in v1 with SVC-02).
 - [ ] How to avoid an admin prompt for every new site: accept the prompt, pre-authorise the helper once with an elevated scheduled task, or offer `.localhost`? Tested: browsers and `curl.exe` resolve `*.localhost` themselves, but the Windows resolver (used by PHP, .NET and most programs) fails, so a site calling its own URL breaks (WordPress cron and Site Health loopback requests). `.localhost` can only be a fallback where the hosts file is locked.
 - [x] Keep mkcert or generate the CA in Go? Go (`core/certs`): no extra download, and the CA carries name constraints mkcert does not add. mkcert's last release is v1.4.4 (April 2022) with no published checksums.

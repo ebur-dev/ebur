@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ebur/ebur/internal/fsutil"
+	"github.com/ebur-dev/ebur/internal/fsutil"
 )
 
 const (

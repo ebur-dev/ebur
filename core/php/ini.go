@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ebur/ebur/internal/fsutil"
+	"github.com/ebur-dev/ebur/internal/fsutil"
 )
 
 // Extensions enabled on first install: what Laravel, WordPress and

@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 // Open starts cmd.exe in its own console window with Ebur's environment,

@@ -16,12 +16,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/hostsfile"
-	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/core/runtimes"
-	"github.com/ebur/ebur/core/sites"
-	"github.com/ebur/ebur/internal/winutil"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/hostsfile"
+	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/runtimes"
+	"github.com/ebur-dev/ebur/core/sites"
+	"github.com/ebur-dev/ebur/internal/winutil"
 )
 
 // HelperName is the elevated helper's file name; it ships next to ebur.exe.

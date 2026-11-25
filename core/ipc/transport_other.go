@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 // Unix socket paths are limited to about 100 bytes, so use the temp dir.

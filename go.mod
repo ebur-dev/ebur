@@ -1,4 +1,4 @@
-module github.com/ebur/ebur
+module github.com/ebur-dev/ebur
 
 go 1.27
 

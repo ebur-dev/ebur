@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 type hinted struct{}

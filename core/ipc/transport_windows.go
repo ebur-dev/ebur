@@ -8,7 +8,7 @@ import (
 	"github.com/Microsoft/go-winio"
 	"golang.org/x/sys/windows"
 
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 func pipePath(root paths.Root) string { return `\\.\pipe\` + endpoint(root) }

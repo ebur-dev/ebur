@@ -19,11 +19,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/core/php"
-	"github.com/ebur/ebur/internal/fsutil"
-	"github.com/ebur/ebur/internal/proc"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/php"
+	"github.com/ebur-dev/ebur/internal/fsutil"
+	"github.com/ebur-dev/ebur/internal/proc"
 )
 
 // Report is what Prepare did, for display.

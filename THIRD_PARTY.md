@@ -1,6 +1,7 @@
 # Third-party software in Ebur
 
-Ebur keeps every component's own licence (SRS NFR-16). This file is checked
+Ebur itself is released under the MIT licence (see `LICENSE`). Every
+component below keeps its own licence (SRS NFR-16). This file is checked
 per release.
 
 ## Built into Ebur's programs

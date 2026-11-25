@@ -14,8 +14,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ebur/ebur/core/manifest"
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/manifest"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 func makeZip(t *testing.T, files map[string]string) []byte {

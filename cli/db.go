@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/host"
-	"github.com/ebur/ebur/core/ports"
-	"github.com/ebur/ebur/core/provision"
-	"github.com/ebur/ebur/core/runtimes"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/host"
+	"github.com/ebur-dev/ebur/core/ports"
+	"github.com/ebur-dev/ebur/core/provision"
+	"github.com/ebur-dev/ebur/core/runtimes"
 )
 
 func dbCmd() *cobra.Command {

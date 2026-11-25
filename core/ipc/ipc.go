@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 const maxMessage = 1 << 20

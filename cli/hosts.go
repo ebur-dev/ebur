@@ -7,10 +7,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/hostsfile"
-	"github.com/ebur/ebur/core/hostsync"
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/hostsfile"
+	"github.com/ebur-dev/ebur/core/hostsync"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 // syncHosts maps every site to 127.0.0.1, prompting once only if the

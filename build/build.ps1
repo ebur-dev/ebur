@@ -36,6 +36,7 @@ go build -trimpath -ldflags $ld -o "$stage\ebur.exe" ./cli; Check 'build ebur.ex
 go build -trimpath -ldflags "$ld -H windowsgui" -o "$stage\ebur-app.exe" ./app; Check 'build ebur-app.exe'
 go build -trimpath -ldflags "-s -w" -o "$stage\ebur-helper.exe" ./helper; Check 'build ebur-helper.exe'
 Copy-Item THIRD_PARTY.md, build\ebur.ico $stage
+Copy-Item LICENSE "$stage\LICENSE.txt"   # .txt so Windows users can open it
 
 Step "Portable zip"
 $zip = Join-Path $dist "ebur-$Version-windows-x64.zip"

@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ebur/ebur/core/manifest"
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/manifest"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 func TestInstallFromRepoManifest(t *testing.T) {

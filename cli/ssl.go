@@ -7,10 +7,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ebur/ebur/core/certs"
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/host"
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/certs"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/host"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 // restartIfRunning applies a change to running services.

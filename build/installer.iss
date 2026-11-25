@@ -26,7 +26,8 @@ AppName=Ebur
 AppVersion={#AppVersion}
 AppVerName=Ebur {#AppVersion}
 AppPublisher=Ebur
-AppPublisherURL=https://github.com/ebur/ebur
+AppPublisherURL=https://github.com/ebur-dev/ebur
+LicenseFile={#StageDir}\LICENSE.txt
 DefaultDirName={sd}\ebur
 UsePreviousAppDir=yes
 DisableProgramGroupPage=yes
@@ -56,6 +57,7 @@ Source: "{#StageDir}\ebur-app.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StageDir}\ebur-helper.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StageDir}\ebur.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StageDir}\THIRD_PARTY.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#StageDir}\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\Ebur"; Filename: "{app}\ebur-app.exe"; IconFilename: "{app}\ebur.ico"; Comment: "Local PHP development environment"

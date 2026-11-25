@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 func TestPassword(t *testing.T) {

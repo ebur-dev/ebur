@@ -17,13 +17,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/ipc"
-	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/core/ports"
-	"github.com/ebur/ebur/core/runtimes"
-	"github.com/ebur/ebur/core/sites"
-	"github.com/ebur/ebur/core/supervisor"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/ipc"
+	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/ports"
+	"github.com/ebur-dev/ebur/core/runtimes"
+	"github.com/ebur-dev/ebur/core/sites"
+	"github.com/ebur-dev/ebur/core/supervisor"
 )
 
 // Version is set by the build.

@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ebur/ebur/core/doctor"
+	"github.com/ebur-dev/ebur/core/doctor"
 )
 
 func doctorCmd() *cobra.Command {

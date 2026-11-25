@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ebur/ebur/core/shellenv"
+	"github.com/ebur-dev/ebur/core/shellenv"
 )
 
 // terminalCmd is the CLI twin of the window's "Open terminal" (CLI-01).

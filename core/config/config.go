@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ebur/ebur/internal/fsutil"
+	"github.com/ebur-dev/ebur/internal/fsutil"
 )
 
 // Settings is the content of ebur.json. Fields left out of the file take

@@ -8,12 +8,12 @@ import (
 	"fmt"
 	goruntime "runtime"
 
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/manifest"
-	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/core/provision"
-	"github.com/ebur/ebur/core/runtimes"
-	manifestdata "github.com/ebur/ebur/manifest"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/manifest"
+	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/provision"
+	"github.com/ebur-dev/ebur/core/runtimes"
+	manifestdata "github.com/ebur-dev/ebur/manifest"
 )
 
 // Manifest returns the manifest built into this binary.

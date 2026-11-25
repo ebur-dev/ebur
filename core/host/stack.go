@@ -9,17 +9,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ebur/ebur/core/certs"
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/nginxconf"
-	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/core/php"
-	"github.com/ebur/ebur/core/provision"
-	"github.com/ebur/ebur/core/runtimes"
-	"github.com/ebur/ebur/core/sites"
-	"github.com/ebur/ebur/core/supervisor"
-	"github.com/ebur/ebur/internal/fsutil"
-	"github.com/ebur/ebur/internal/proc"
+	"github.com/ebur-dev/ebur/core/certs"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/nginxconf"
+	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/php"
+	"github.com/ebur-dev/ebur/core/provision"
+	"github.com/ebur-dev/ebur/core/runtimes"
+	"github.com/ebur-dev/ebur/core/sites"
+	"github.com/ebur-dev/ebur/core/supervisor"
+	"github.com/ebur-dev/ebur/internal/fsutil"
+	"github.com/ebur-dev/ebur/internal/proc"
 )
 
 const (

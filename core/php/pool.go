@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ebur/ebur/core/supervisor"
+	"github.com/ebur-dev/ebur/core/supervisor"
 )
 
 // DefaultMaxRequests is the base request limit per worker.

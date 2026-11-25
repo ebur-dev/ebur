@@ -18,8 +18,8 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/w32"
 
-	"github.com/ebur/ebur/core/host"
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/host"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 var version = "dev"

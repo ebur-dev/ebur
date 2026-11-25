@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ebur/ebur/core/hostsfile"
+	"github.com/ebur-dev/ebur/core/hostsfile"
 )
 
 func main() {

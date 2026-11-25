@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ebur/ebur/core/host"
-	"github.com/ebur/ebur/core/hostsync"
-	"github.com/ebur/ebur/core/setup"
+	"github.com/ebur-dev/ebur/core/host"
+	"github.com/ebur-dev/ebur/core/hostsync"
+	"github.com/ebur-dev/ebur/core/setup"
 )
 
 // setupCmd is the CLI twin of the window's first-run wizard (CLI-01).

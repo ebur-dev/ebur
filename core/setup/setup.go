@@ -11,13 +11,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ebur/ebur/core/certs"
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/install"
-	"github.com/ebur/ebur/core/manifest"
-	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/core/ports"
-	"github.com/ebur/ebur/core/runtimes"
+	"github.com/ebur-dev/ebur/core/certs"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/install"
+	"github.com/ebur-dev/ebur/core/manifest"
+	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/ports"
+	"github.com/ebur-dev/ebur/core/runtimes"
 )
 
 // DBOption is one database choice.

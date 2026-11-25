@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/ipc"
-	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/core/supervisor"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/ipc"
+	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/supervisor"
 )
 
 func TestMain(m *testing.M) {

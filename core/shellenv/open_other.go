@@ -5,7 +5,7 @@ package shellenv
 import (
 	"errors"
 
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 // TODO(v2): open the user's terminal app with the environment set.

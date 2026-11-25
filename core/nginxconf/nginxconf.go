@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ebur/ebur/core/php"
-	"github.com/ebur/ebur/core/sites"
+	"github.com/ebur-dev/ebur/core/php"
+	"github.com/ebur-dev/ebur/core/sites"
 )
 
 type Config struct {

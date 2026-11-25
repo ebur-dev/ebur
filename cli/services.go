@@ -15,10 +15,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ebur/ebur/core/host"
-	"github.com/ebur/ebur/core/ipc"
-	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/core/supervisor"
+	"github.com/ebur-dev/ebur/core/host"
+	"github.com/ebur-dev/ebur/core/ipc"
+	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/supervisor"
 )
 
 func call(root paths.Root, method string, params, out any) error {

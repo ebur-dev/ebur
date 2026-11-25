@@ -7,9 +7,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/ebur/ebur/core/host"
-	"github.com/ebur/ebur/core/ipc"
-	"github.com/ebur/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/host"
+	"github.com/ebur-dev/ebur/core/ipc"
+	"github.com/ebur-dev/ebur/core/paths"
 )
 
 // backend reaches the Ebur host. Normally the app embeds the host, so the

@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/core/runtimes"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/runtimes"
 )
 
 // Env is what a console needs on top of the user's own environment.

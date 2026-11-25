@@ -11,12 +11,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/host"
-	"github.com/ebur/ebur/core/install"
-	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/core/runtimes"
-	"github.com/ebur/ebur/core/sites"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/host"
+	"github.com/ebur-dev/ebur/core/install"
+	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/runtimes"
+	"github.com/ebur-dev/ebur/core/sites"
 )
 
 // installRuntime runs the shared install flow (core/install) and prints

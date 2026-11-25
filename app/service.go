@@ -17,19 +17,19 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
-	"github.com/ebur/ebur/core/certs"
-	"github.com/ebur/ebur/core/config"
-	"github.com/ebur/ebur/core/doctor"
-	"github.com/ebur/ebur/core/host"
-	"github.com/ebur/ebur/core/hostsfile"
-	"github.com/ebur/ebur/core/hostsync"
-	"github.com/ebur/ebur/core/install"
-	"github.com/ebur/ebur/core/paths"
-	"github.com/ebur/ebur/core/runtimes"
-	"github.com/ebur/ebur/core/setup"
-	"github.com/ebur/ebur/core/shellenv"
-	"github.com/ebur/ebur/core/sites"
-	"github.com/ebur/ebur/core/supervisor"
+	"github.com/ebur-dev/ebur/core/certs"
+	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/doctor"
+	"github.com/ebur-dev/ebur/core/host"
+	"github.com/ebur-dev/ebur/core/hostsfile"
+	"github.com/ebur-dev/ebur/core/hostsync"
+	"github.com/ebur-dev/ebur/core/install"
+	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/runtimes"
+	"github.com/ebur-dev/ebur/core/setup"
+	"github.com/ebur-dev/ebur/core/shellenv"
+	"github.com/ebur-dev/ebur/core/sites"
+	"github.com/ebur-dev/ebur/core/supervisor"
 )
 
 // App is bound to the frontend: every exported method can be called from

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ebur/ebur/core/php"
-	"github.com/ebur/ebur/core/sites"
+	"github.com/ebur-dev/ebur/core/php"
+	"github.com/ebur-dev/ebur/core/sites"
 )
 
 func TestRender(t *testing.T) {
