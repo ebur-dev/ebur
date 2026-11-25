@@ -26,7 +26,8 @@ everything in one folder.
 - **Sites:** every folder in `www\` is served at `<folder>.test`; Laravel and
   Symfony `public\` folders are detected. New or removed folders, and changes
   to a site's PHP version, apply within about two seconds, without a restart.
-- **PHP 8.2 to 8.6, per project:** each site can run its own PHP version at
+- **PHP 8.2 to 8.6, plus legacy 7.4, 8.0 and 8.1 for old projects** (clearly
+  marked as end of life), **per project:** each site can run its own PHP version at
   the same time, chosen by a `.ebur` file (`php: "8.3"`) or the PHP
   requirement in its `composer.json`; everything else uses the default,
   which you switch in one click. PHP runs as a pool of workers, so a slow

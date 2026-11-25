@@ -107,6 +107,7 @@ type Overview struct {
 	Skipped      []sites.Skipped `json:"skipped"`
 	PHPActive    string          `json:"phpActive"`
 	PHPInstalled []string        `json:"phpInstalled"`
+	PHPLegacy    []string        `json:"phpLegacy"` // installed versions past end of life
 	HTTPS        bool            `json:"https"`
 	Adminer      bool            `json:"adminer"`
 	Mail         bool            `json:"mail"` // Mailpit installed (TOOL-03)
@@ -127,6 +128,7 @@ type SiteRow struct {
 	PHPSource  string `json:"phpSource"`
 	PHPWant    string `json:"phpWant"`
 	PHPProblem string `json:"phpProblem"`
+	PHPEOL     string `json:"phpEol"` // set when the version is past end of life
 	Running    bool   `json:"running"`
 }
 
@@ -170,11 +172,15 @@ func (a *App) Overview() (Overview, error) {
 			continue
 		}
 		c := project.Resolve(s.Dir, ov.PHPInstalled, ov.PHPActive)
-		ov.Sites = append(ov.Sites, SiteRow{
+		row := SiteRow{
 			Name: s.Name, URL: scheme + "://" + s.Host, DocRoot: s.DocRoot,
 			PHP: c.Version, PHPSource: c.Source, PHPWant: c.Want, PHPProblem: c.Problem,
 			Running: nginxUp,
-		})
+		}
+		if sup := install.SupportOf("php", c.Version); sup.Ended {
+			row.PHPEOL = sup.EOL
+		}
+		ov.Sites = append(ov.Sites, row)
 	}
 	// Empty lists, not null, so the page can iterate without checks.
 	if ov.Skipped == nil {
@@ -185,6 +191,12 @@ func (a *App) Overview() (Overview, error) {
 	}
 	if ov.PHPInstalled == nil {
 		ov.PHPInstalled = []string{}
+	}
+	ov.PHPLegacy = []string{}
+	for _, v := range ov.PHPInstalled {
+		if install.SupportOf("php", v).Ended {
+			ov.PHPLegacy = append(ov.PHPLegacy, v)
+		}
 	}
 	if ov.Status.Services == nil {
 		ov.Status.Services = []supervisor.Status{}

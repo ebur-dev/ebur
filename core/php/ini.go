@@ -17,6 +17,24 @@ var DefaultExtensions = []string{"curl", "fileinfo", "gd", "intl", "mbstring", "
 
 const marker = "; ---- Ebur settings"
 
+// oldNames maps an extension to the file name older PHP builds used:
+// PHP 7.4 ships gd as php_gd2.dll (renamed php_gd.dll in 8.0).
+var oldNames = map[string]string{"gd": "gd2"}
+
+// extensionFile returns the name to load ext by in this PHP build, if the
+// build has it.
+func extensionFile(phpDir, ext string) (string, bool) {
+	for _, name := range []string{ext, oldNames[ext]} {
+		if name == "" {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(phpDir, "ext", "php_"+name+".dll")); err == nil {
+			return name, true
+		}
+	}
+	return "", false
+}
+
 // iniPath quotes a path for php.ini with forward slashes, which PHP accepts
 // on Windows and which need no escaping.
 func iniPath(p string) string { return `"` + filepath.ToSlash(p) + `"` }
@@ -42,8 +60,8 @@ func EnsureINI(etcDir, phpDir, version, tmpDir string) (string, error) {
 	fmt.Fprintf(&b, "\n\n%s (added on first install; safe to edit) ----\n", marker)
 	fmt.Fprintf(&b, "extension_dir = %s\n", iniPath(filepath.Join(phpDir, "ext")))
 	for _, ext := range DefaultExtensions {
-		if _, err := os.Stat(filepath.Join(phpDir, "ext", "php_"+ext+".dll")); err == nil {
-			fmt.Fprintf(&b, "extension = %s\n", ext)
+		if name, ok := extensionFile(phpDir, ext); ok {
+			fmt.Fprintf(&b, "extension = %s\n", name)
 		}
 	}
 	fmt.Fprintf(&b, "upload_tmp_dir = %s\n", iniPath(tmpDir))

@@ -75,7 +75,21 @@ func installRuntime(root paths.Root, name, want string) error {
 	if res.Activated {
 		fmt.Printf("%s %s is now the active version.\n", name, res.Version)
 	}
+	if sup := install.SupportOf(name, res.Version); sup.Ended {
+		fmt.Printf("\nwarning: %s %s reached end of life on %s and gets no security fixes.\n", name, res.Version, sup.EOL)
+		fmt.Println("Use it for old projects only: pin a site with `ebur sites php <site> " + series(res.Version) + "`.")
+		fmt.Println("Ebur's sites are only reachable from this computer, which limits the risk.")
+	}
 	return nil
+}
+
+// series returns "7.4" for "7.4.33".
+func series(v string) string {
+	p := strings.SplitN(v, ".", 3)
+	if len(p) < 2 {
+		return v
+	}
+	return p[0] + "." + p[1]
 }
 
 func cmdFor(name string) string {
@@ -255,8 +269,9 @@ func listRuntime(root paths.Root, name string) error {
 	installed, _ := runtimes.Installed(root, name)
 	cfg, _ := config.Load(root.Config())
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "VERSION\tSTATUS")
+	fmt.Fprintln(w, "VERSION\tSTATUS\tSECURITY SUPPORT")
 	seen := map[string]bool{}
+	now := time.Now()
 	for _, r := range m.Releases(name, "x64") {
 		seen[r.Version] = true
 		status := "available"
@@ -266,7 +281,15 @@ func listRuntime(root paths.Root, name string) error {
 		if cfg.Active[name] == r.Version {
 			status += ", active"
 		}
-		fmt.Fprintf(w, "%s\t%s\n", r.Version, status)
+		support := "-"
+		switch {
+		case r.EOL == "":
+		case r.EndOfLife(now):
+			support = "ENDED " + r.EOL + " (legacy, old projects only)"
+		default:
+			support = "until " + r.EOL
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\n", r.Version, status, support)
 	}
 	for _, v := range installed {
 		if !seen[v] {
@@ -332,7 +355,11 @@ func sitesCmd() *cobra.Command {
 				if s.PHP.Want != "" {
 					by += " (" + s.PHP.Want + ")"
 				}
-				fmt.Fprintf(w, "%s://%s\t%s\t%s\t%s\t%s\n", scheme, s.Host, s.PHP.Version, by, status, s.DocRoot)
+				php := s.PHP.Version
+				if install.SupportOf("php", php).Ended {
+					php += " (EOL)" // legacy: no security fixes
+				}
+				fmt.Fprintf(w, "%s://%s\t%s\t%s\t%s\t%s\n", scheme, s.Host, php, by, status, s.DocRoot)
 			}
 			w.Flush()
 			for _, s := range found {

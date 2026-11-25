@@ -12,6 +12,7 @@ package provision
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -82,6 +83,10 @@ func preparePHP(ctx context.Context, root paths.Root, dir, version string, say f
 	for _, exe := range []string{"php-cgi", "php"} {
 		out, err := run(ctx, filepath.Join(dir, proc.Exe(exe)), "-c", ini, "-m")
 		if err != nil {
+			var ee *exec.ExitError
+			if errors.As(err, &ee) && uint32(ee.ExitCode()) == statusDLLNotFound {
+				return rep, fmt.Errorf("PHP %s needs the Microsoft Visual C++ Redistributable (x64), which is not installed. Install it from https://aka.ms/vs/17/release/vc_redist.x64.exe, then run this again", version)
+			}
 			return rep, fmt.Errorf("%s does not run: %v: %s", exe, err, lastLines(out, 3))
 		}
 		for _, l := range strings.Split(out, "\n") {
@@ -96,6 +101,10 @@ func preparePHP(ctx context.Context, root paths.Root, dir, version string, say f
 	rep.Steps = append(rep.Steps, "php and php-cgi run with the generated php.ini")
 	return rep, nil
 }
+
+// statusDLLNotFound (0xC0000135) is the exit code when Windows cannot load
+// a program's DLLs, e.g. a PHP build whose Visual C++ runtime is missing.
+const statusDLLNotFound = 0xC0000135
 
 // Series returns "12.3" for "12.3.4": data folders are shared by patch
 // releases of one series, so a patch update keeps the databases.

@@ -45,11 +45,16 @@ func TestResolve(t *testing.T) {
 			t.Errorf("%s: got %+v", tc.name, c)
 		}
 	}
-	// ^7.4 cannot be installed (end of life, not in the manifest): the
-	// hint must say to change the requirement, not suggest a failing install.
-	unmet := Resolve(site(t, map[string]string{"composer.json": `{"require":{"php":"^7.4"}}`}), installed, active)
+	// 7.4 is offered as a legacy version: suggest installing it.
+	legacy := Resolve(site(t, map[string]string{"composer.json": `{"require":{"php":"^7.4"}}`}), installed, active)
+	if !strings.Contains(legacy.Problem, "ebur php install 7.4") {
+		t.Errorf("hint for ^7.4: %q", legacy.Problem)
+	}
+	// ^5.6 is not offered at all: the hint must say to change the
+	// requirement, not suggest an install that would fail.
+	unmet := Resolve(site(t, map[string]string{"composer.json": `{"require":{"php":"^5.6"}}`}), installed, active)
 	if strings.Contains(unmet.Problem, "ebur php install") || !strings.Contains(unmet.Problem, "update require.php") {
-		t.Errorf("hint for ^7.4: %q", unmet.Problem)
+		t.Errorf("hint for ^5.6: %q", unmet.Problem)
 	}
 	// ^8.6 can be installed: suggest exactly that.
 	needs86 := Resolve(site(t, map[string]string{"composer.json": `{"require":{"php":"^8.6"}}`}), installed, active)

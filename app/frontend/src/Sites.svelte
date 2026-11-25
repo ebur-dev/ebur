@@ -43,7 +43,7 @@
             <td>
               <select value={pinned(s)} onchange={(e) => choose(s, e.currentTarget.value)} title="PHP version for this site">
                 <option value="">{autoLabel(s)}</option>
-                {#each ov.phpInstalled as v}<option value={v}>{v}</option>{/each}
+                {#each ov.phpInstalled as v}<option value={v}>{v}{ov.phpLegacy.includes(v) ? ' (end of life)' : ''}</option>{/each}
               </select>
               {#if s.phpSource === 'composer.json' && !s.phpProblem}
                 <div class="src">from composer.json ({s.phpWant})</div>
@@ -51,6 +51,7 @@
                 <div class="src">pinned in .ebur</div>
               {/if}
               {#if s.phpProblem}<div class="problem" title={s.phpProblem}>{s.phpProblem}</div>{/if}
+              {#if s.phpEol}<div class="problem" title="This PHP version gets no security fixes. Fine for maintaining an old project on this computer; plan to upgrade.">Legacy: end of life since {s.phpEol}</div>{/if}
             </td>
             <td><span class="dot {s.running ? 'running' : ''}"></span>{s.running ? 'Running' : 'Stopped'}</td>
             <td class="mono muted path" title={s.docRoot}>{s.docRoot}</td>

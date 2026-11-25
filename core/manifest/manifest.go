@@ -34,6 +34,29 @@ type Release struct {
 	File    string `json:"file,omitempty"`  // set for single-file downloads (not zips): saved under this name
 	Arch    string `json:"arch"`            // "x64" or "arm64"
 	Notes   string `json:"notes,omitempty"` // e.g. build flavour "nts-vs17"
+	// EOL is the end of security support, YYYY-MM-DD (SEC-01). Releases
+	// past it stay installable for legacy projects, with a warning.
+	EOL string `json:"eol,omitempty"`
+}
+
+// EndOfLife reports whether the release is past its end of support.
+func (r Release) EndOfLife(now time.Time) bool {
+	if r.EOL == "" {
+		return false
+	}
+	t, err := time.Parse("2006-01-02", r.EOL)
+	// Supported through the EOL date itself; end of life from the next day.
+	return err == nil && !now.Before(t.Add(24*time.Hour))
+}
+
+// Find returns the release of runtime with exactly this version.
+func (m *Manifest) Find(runtime, version string) (Release, bool) {
+	for _, r := range m.Runtimes[runtime] {
+		if r.Version == version {
+			return r, true
+		}
+	}
+	return Release{}, false
 }
 
 // Parse decodes and validates a manifest.
@@ -88,6 +111,11 @@ func (m *Manifest) Validate() error {
 			}
 			if r.File != "" && (r.Root != "" || strings.ContainsAny(r.File, `/\:`) || strings.HasPrefix(r.File, ".")) {
 				return fmt.Errorf("%s: file must be a plain file name and cannot be combined with root", where)
+			}
+			if r.EOL != "" {
+				if _, err := time.Parse("2006-01-02", r.EOL); err != nil {
+					return fmt.Errorf("%s: eol must be YYYY-MM-DD", where)
+				}
 			}
 		}
 	}

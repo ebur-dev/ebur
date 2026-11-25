@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ebur-dev/ebur/core/certs"
 	"github.com/ebur-dev/ebur/core/config"
@@ -80,8 +81,13 @@ func GetOptions(root paths.Root) (Options, error) {
 	if inst, _ := runtimes.Installed(root, "php"); len(inst) > 0 {
 		o.HavePHP = true
 	}
+	// Legacy (end-of-life) PHP versions stay installable for old projects
+	// with `ebur php install`, but a new setup only offers supported ones.
+	now := time.Now()
 	for _, r := range m.Releases("php", "x64") {
-		o.PHP = append(o.PHP, r.Version)
+		if !r.EndOfLife(now) {
+			o.PHP = append(o.PHP, r.Version)
+		}
 	}
 	o.PHPDefault = RecommendedPHP(o.PHP)
 	for _, r := range m.Releases("mariadb", "x64") {

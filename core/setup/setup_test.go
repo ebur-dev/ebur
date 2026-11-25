@@ -39,6 +39,11 @@ func TestGetOptions(t *testing.T) {
 	if !strings.Contains(o.DB[0].Label, "supported until") {
 		t.Errorf("label %q", o.DB[0].Label)
 	}
+	for _, v := range o.PHP {
+		if strings.HasPrefix(v, "7.") || strings.HasPrefix(v, "8.0.") || strings.HasPrefix(v, "8.1.") {
+			t.Errorf("first-run setup offers end-of-life PHP %s", v)
+		}
+	}
 	// Once PHP is installed (e.g. with the CLI), the wizard is not needed.
 	os.MkdirAll(root.RuntimeDir("php", "8.4.28"), 0o755)
 	if NeedsSetup(root) {

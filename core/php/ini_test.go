@@ -40,6 +40,23 @@ func TestEnsureINI(t *testing.T) {
 	}
 }
 
+// PHP 7.4 names its gd extension php_gd2.dll; it must still be enabled.
+func TestEnsureINIOldExtensionNames(t *testing.T) {
+	d := t.TempDir()
+	phpDir := filepath.Join(d, "php74")
+	os.MkdirAll(filepath.Join(phpDir, "ext"), 0o755)
+	os.WriteFile(filepath.Join(phpDir, "php.ini-development"), nil, 0o644)
+	os.WriteFile(filepath.Join(phpDir, "ext", "php_gd2.dll"), nil, 0o644)
+	p, err := EnsureINI(filepath.Join(d, "etc"), phpDir, "7.4.33", filepath.Join(d, "tmp"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(p)
+	if !strings.Contains(string(b), "extension = gd2") {
+		t.Fatalf("gd not enabled for a 7.4-style build:\n%s", b)
+	}
+}
+
 func TestEnsureINIMissingTemplate(t *testing.T) {
 	d := t.TempDir()
 	if _, err := EnsureINI(filepath.Join(d, "etc"), filepath.Join(d, "nophp"), "8.4.28", filepath.Join(d, "tmp")); err == nil {

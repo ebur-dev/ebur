@@ -72,7 +72,7 @@
             disabled={!!busy || ov.phpInstalled.length === 0}
             onchange={(e) => run('Switching PHP…', 'SetPHP', e.currentTarget.value)}
           >
-            {#each ov.phpInstalled as v}<option value={v}>{v}</option>{/each}
+            {#each ov.phpInstalled as v}<option value={v}>{v}{ov.phpLegacy.includes(v) ? ' (end of life)' : ''}</option>{/each}
           </select>
         </label>
         {#if ov.status.summary !== 'all'}

@@ -74,10 +74,35 @@ func TestSitePHPProblem(t *testing.T) {
 	os.MkdirAll(filepath.Join(root.RuntimeDir("php", "8.5.13"), "ext"), 0o755)
 	legacy := filepath.Join(root.WWW(), "legacy")
 	os.MkdirAll(legacy, 0o755)
-	os.WriteFile(filepath.Join(legacy, "composer.json"), []byte(`{"require":{"php":"^7.4"}}`), 0o644)
+	os.WriteFile(filepath.Join(legacy, "composer.json"), []byte(`{"require":{"php":"^5.6"}}`), 0o644)
 	c := find(Run(root, Options{HostsFile: filepath.Join(t.TempDir(), "none")}), "Site legacy PHP")
-	if c.Level != Warn || !strings.Contains(c.Detail, "^7.4") || !strings.Contains(c.Hint, "composer.json") {
+	if c.Level != Warn || !strings.Contains(c.Detail, "^5.6") || !strings.Contains(c.Hint, "composer.json") {
 		t.Fatalf("%+v", c)
+	}
+}
+
+// SEC-01: a site on end-of-life PHP is flagged; an unused one is noted.
+func TestLegacyPHP(t *testing.T) {
+	root, _ := paths.New(t.TempDir())
+	for _, v := range []string{"8.5.13", "8.0.30", "7.4.33"} {
+		os.MkdirAll(filepath.Join(root.RuntimeDir("php", v), "ext"), 0o755)
+	}
+	cfg := config.Defaults()
+	cfg.Active["php"] = "8.5.13"
+	config.Save(root.Config(), cfg)
+	old := filepath.Join(root.WWW(), "oldshop")
+	os.MkdirAll(old, 0o755)
+	os.WriteFile(filepath.Join(old, ".ebur"), []byte("php: 7.4\n"), 0o644)
+
+	cs := Run(root, Options{HostsFile: filepath.Join(t.TempDir(), "none")})
+	if c := find(cs, "PHP 7.4.33"); c.Level != Warn || !strings.Contains(c.Detail, "oldshop") || !strings.Contains(c.Detail, "2022-11-28") {
+		t.Errorf("used legacy PHP: %+v", c)
+	}
+	if c := find(cs, "PHP 8.0.30"); c.Level != Info || !strings.Contains(c.Hint, "ebur php remove 8.0.30") {
+		t.Errorf("unused legacy PHP: %+v", c)
+	}
+	if c := find(cs, "PHP 8.5.13"); c.Name != "" {
+		t.Errorf("supported PHP flagged: %+v", c)
 	}
 }
 

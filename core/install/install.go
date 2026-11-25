@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	goruntime "runtime"
+	"time"
 
 	"github.com/ebur-dev/ebur/core/config"
 	"github.com/ebur-dev/ebur/core/manifest"
@@ -28,6 +29,25 @@ func Resolve(m *manifest.Manifest, name, want string) (manifest.Release, error) 
 		}
 	}
 	return m.Resolve(name, want, "x64")
+}
+
+// Support describes a version's security support (SEC-01).
+type Support struct {
+	EOL   string `json:"eol"`   // YYYY-MM-DD, "" if unknown
+	Ended bool   `json:"ended"` // past end of life: legacy
+}
+
+// SupportOf looks a runtime version up in the built-in manifest.
+func SupportOf(runtime, version string) Support {
+	m, err := Manifest()
+	if err != nil {
+		return Support{}
+	}
+	r, ok := m.Find(runtime, version)
+	if !ok {
+		return Support{}
+	}
+	return Support{EOL: r.EOL, Ended: r.EndOfLife(time.Now())}
 }
 
 // Result describes what Runtime did.

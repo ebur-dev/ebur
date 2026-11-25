@@ -197,7 +197,7 @@ The MVP needs 23 Must requirements across runtimes, services, sites and the two 
 
 | ID | Requirement | Priority | Release |
 | --- | --- | --- | --- |
-| SEC-01 | The runtime manifest shall record each version's support status (active, security-only, end of life), end-of-life date, minimum safe patch and related advisories. | Should | v1 |
+| SEC-01 | The runtime manifest shall record each version's support status (active, security-only, end of life), end-of-life date, minimum safe patch and related advisories. Partly implemented Nov 25, 2026: every PHP release carries its end-of-life date; legacy PHP 8.1, 8.0 and 7.4 are installable for old projects with warnings at install, in `ebur php list`, `ebur sites`, the Sites tab and `ebur doctor`, and are not offered by first-run setup. Advisories and minimum safe patch remain. | Should | v1 |
 | SEC-02 | Ebur shall fetch the manifest on startup and daily, cache it, and use the cached copy when offline. | Should | v1 |
 | SEC-03 | Ebur shall badge every installed runtime as supported, security-only / end of life within 6 months, or vulnerable / end of life, and show a warning dot on the tray icon for the last case. | Should | v1 |
 | SEC-04 | Ebur shall offer a one-click update to the latest patch of the same minor version and repoint affected sites. | Should | v1 |

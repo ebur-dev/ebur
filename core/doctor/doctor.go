@@ -14,6 +14,7 @@ import (
 
 	"github.com/ebur-dev/ebur/core/certs"
 	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/install"
 	"github.com/ebur-dev/ebur/core/paths"
 	"github.com/ebur-dev/ebur/core/ports"
 	"github.com/ebur-dev/ebur/core/project"
@@ -123,12 +124,30 @@ func Run(root paths.Root, opt Options) []Check {
 		add(Check{"Site " + s.Folder, Warn, s.Reason, "Rename the folder in www\\."})
 	}
 	// PHP-04: a site asking for a PHP version that is not installed still
-	// runs, on the default version; say so.
+	// runs, on the default version; say so. SEC-01: flag sites running an
+	// end-of-life (legacy) PHP version, which gets no security fixes.
 	if def := active["php"]; def != "" {
 		installed, _ := runtimes.Installed(root, "php")
+		used := map[string][]string{}
 		for _, s := range found {
-			if c := project.Resolve(s.Dir, installed, def); c.Problem != "" {
+			c := project.Resolve(s.Dir, installed, def)
+			if c.Problem != "" {
 				add(Check{"Site " + s.Name + " PHP", Warn, "asks for PHP " + c.Want + " in " + c.Source, c.Problem})
+			}
+			used[c.Version] = append(used[c.Version], s.Name)
+		}
+		for _, v := range installed {
+			sup := install.SupportOf("php", v)
+			if !sup.Ended {
+				continue
+			}
+			if names := used[v]; len(names) > 0 {
+				add(Check{"PHP " + v, Warn,
+					fmt.Sprintf("end of life since %s (no security fixes), used by: %s", sup.EOL, strings.Join(names, ", ")),
+					"Fine for maintaining an old project on this computer; plan to upgrade it. Ebur's sites are only reachable from this computer."})
+			} else {
+				add(Check{"PHP " + v, Info, "end of life since " + sup.EOL + ", installed but not used by any site",
+					fmt.Sprintf("Remove it with `ebur php remove %s` if you no longer need it.", v)})
 			}
 		}
 	}
