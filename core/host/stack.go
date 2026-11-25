@@ -3,6 +3,7 @@ package host
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -134,6 +135,12 @@ func mariadbSpec(root paths.Root, version, password string, port int) (superviso
 	myIni, err := provision.WriteMyIni(root, version, port)
 	if err != nil {
 		return supervisor.Spec{}, err
+	}
+	// Installs made before Ebur trimmed MariaDB get trimmed here, once.
+	if freed, err := provision.TrimMariaDB(dir); err != nil {
+		log.Printf("mariadb: could not remove debug files: %v", err)
+	} else if freed > 0 {
+		log.Printf("mariadb: removed %d MB of debug and developer files", freed>>20)
 	}
 	if _, err := os.Stat(filepath.Join(dataDir, "mysql")); err != nil {
 		if _, err := provision.Prepare(context.Background(), root, "mariadb", version, nil); err != nil {

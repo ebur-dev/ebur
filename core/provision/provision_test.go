@@ -41,10 +41,50 @@ func TestMyIni(t *testing.T) {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(p)
-	for _, want := range []string{`datadir="C:/Users/Jane Doe/ebur/data/mariadb/12.3"`, "bind-address=127.0.0.1", "port=3307"} {
+	for _, want := range []string{`datadir="C:/Users/Jane Doe/ebur/data/mariadb/12.3"`, "bind-address=127.0.0.1", "port=3307", "innodb_log_file_size=48M"} {
 		if !strings.Contains(string(b), want) {
 			t.Errorf("missing %q", want)
 		}
+	}
+}
+
+func TestTrimMariaDB(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]int{
+		`bin\mariadbd.exe`: 100, `bin\mariadbd.pdb`: 1000, `bin\mysql.exe`: 50, `bin\server.dll`: 40,
+		`lib\libmariadb.lib`: 300, `lib\libmariadb.dll`: 30, `lib\plugin\auth_ed25519.dll`: 20, `lib\plugin\x.pdb`: 7,
+		`include\mysql\mysql.h`: 70, `include\mysql.h`: 5, `share\english\errmsg.sys`: 60,
+	}
+	for name, n := range files {
+		p := filepath.Join(dir, name)
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, make([]byte, n), 0o644)
+	}
+	outside := filepath.Join(t.TempDir(), "keep.pdb")
+	os.WriteFile(outside, []byte("x"), 0o644)
+
+	freed, err := TrimMariaDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if freed != 1000+300+7+70+5 {
+		t.Errorf("freed %d", freed)
+	}
+	for name := range files {
+		_, err := os.Stat(filepath.Join(dir, name))
+		gone := strings.HasSuffix(name, ".pdb") || strings.HasSuffix(name, ".lib") || strings.HasPrefix(name, "include")
+		if gone != os.IsNotExist(err) {
+			t.Errorf("%s: gone=%v, want %v", name, os.IsNotExist(err), gone)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "include")); !os.IsNotExist(err) {
+		t.Error("include folder kept")
+	}
+	if _, err := os.Stat(outside); err != nil {
+		t.Error("a file outside the runtime folder was touched")
+	}
+	if again, err := TrimMariaDB(dir); err != nil || again != 0 {
+		t.Errorf("second run: %d, %v", again, err)
 	}
 }
 

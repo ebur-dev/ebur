@@ -153,6 +153,11 @@ func prepareMariaDB(ctx context.Context, root paths.Root, dir, version string, s
 		}
 		rep.Steps = append(rep.Steps, "generated a database root password (see `ebur db`)")
 	}
+	if freed, err := TrimMariaDB(dir); err != nil {
+		rep.Warnings = append(rep.Warnings, "could not remove MariaDB's debug files: "+err.Error())
+	} else if freed > 0 {
+		rep.Steps = append(rep.Steps, fmt.Sprintf("removed %d MB of MariaDB debug and developer files", freed>>20))
+	}
 	dataDir, _ := MariaDBPaths(root, version)
 	if _, err := WriteMyIni(root, version, cfg.DBPort); err != nil {
 		return rep, err
@@ -177,6 +182,56 @@ func prepareMariaDB(ctx context.Context, root paths.Root, dir, version string, s
 	return rep, nil
 }
 
+// TrimMariaDB removes files from an installed MariaDB that only matter
+// for debugging or compiling against it: *.pdb debug symbols, *.lib
+// import libraries and the include\ headers (about 130 MB). Programs,
+// DLLs, plugins and share\ stay. It returns the bytes freed and is safe
+// to run again.
+func TrimMariaDB(dir string) (int64, error) {
+	var freed int64
+	var errs []error
+	remove := func(path string, size int64) {
+		if err := os.Remove(path); err != nil {
+			errs = append(errs, err)
+		} else {
+			freed += size
+		}
+	}
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.Type()&(os.ModeSymlink|os.ModeIrregular) != 0 {
+			return nil // a link or junction: never follow or delete through it
+		}
+		if d.IsDir() {
+			if path != dir && strings.EqualFold(d.Name(), "include") && strings.EqualFold(filepath.Dir(path), dir) {
+				filepath.WalkDir(path, func(p string, e os.DirEntry, err error) error {
+					if err == nil && !e.IsDir() {
+						if fi, err := e.Info(); err == nil {
+							remove(p, fi.Size())
+						}
+					}
+					return nil
+				})
+				if err := os.RemoveAll(path); err != nil {
+					errs = append(errs, err)
+				}
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		switch strings.ToLower(filepath.Ext(path)) {
+		case ".pdb", ".lib":
+			if fi, err := d.Info(); err == nil {
+				remove(path, fi.Size())
+			}
+		}
+		return nil
+	})
+	return freed, errors.Join(append(errs, err)...)
+}
+
 // writeMyIni writes the server config Ebur starts MariaDB with. Errors go
 // to the console so the supervisor captures them (SVC-04).
 func writeMyIni(path, dataDir string, port int) error {
@@ -188,6 +243,9 @@ bind-address=127.0.0.1
 character-set-server=utf8mb4
 collation-server=utf8mb4_unicode_ci
 innodb_buffer_pool_size=128M
+# 48 MB of redo log is plenty for development (the default is 96 MB);
+# MariaDB 10.8+ resizes an existing log on start.
+innodb_log_file_size=48M
 max_allowed_packet=256M
 
 [client]
