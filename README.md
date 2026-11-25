@@ -11,10 +11,9 @@
 
 ---
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/sites-dark.png">
-  <img src="docs/screenshots/sites.png" alt="Ebur's Sites tab: five local sites, each on its own PHP version (8.5, 8.3 and a legacy 7.4), all running over HTTPS">
-</picture>
+<p align="center">
+  <img src="docs/screenshots/demo.gif" alt="Ebur in action: Start all starts every site; a new folder named crm appears as a site by itself; crm is switched to PHP 8.3; the browser opens https://crm.test with a padlock, showing PHP 8.3.37">
+</p>
 
 Ebur runs PHP, Nginx, MariaDB or MySQL, Redis and Node.js on your computer.
 Every folder you put in `www\` is served at `https://<folder>.test` (or
