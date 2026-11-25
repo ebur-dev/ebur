@@ -122,7 +122,7 @@ The MVP needs 23 Must requirements across runtimes, services, sites and the two 
 
 | ID | Requirement | Priority | Release |
 | --- | --- | --- | --- |
-| SVC-01 | The system shall start, stop and restart the web server, MariaDB/MySQL and PHP processes individually or all at once. The MVP ships Nginx only. | Must | MVP |
+| SVC-01 | The system shall start, stop and restart the web server, MariaDB/MySQL and PHP processes individually or all at once. The MVP ships Nginx only. Nov 25, 2026: Nginx on Windows takes about 5 s to exit after `nginx -s stop` while any connection is mid-request, so Ebur ends it (and its workers) if it has not exited 1 s after stop; a restart with half-sent or slow requests open now takes 2.7 s instead of 6.7 s. | Must | MVP |
 | SVC-02 | The system shall let the user choose Nginx or Apache as the web server. | Must | v1 |
 | SVC-03 | The system shall detect port conflicts (80, 443, 3306) before start and name the process holding the port. | Must | MVP |
 | SVC-04 | The system shall restart a crashed service up to 3 times, then report the failure with its last log lines. | Should | MVP |

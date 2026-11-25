@@ -2,6 +2,7 @@ package host
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ebur-dev/ebur/core/certs"
 	"github.com/ebur-dev/ebur/core/config"
@@ -84,6 +86,12 @@ func optional(root paths.Root, cfg config.Settings, runtime string) (string, err
 }
 
 var reserved = sites.Reserved
+
+// nginxStopGrace is how long Nginx gets to exit after "nginx -s stop"
+// before it is ended (it normally exits within 0.2 s).
+const nginxStopGrace = time.Second
+
+var errNginxSlowStop = errors.New("nginx did not exit within a second of stop; ending it")
 
 // mailpitSpec runs Mailpit on loopback only. Its own defaults listen on
 // all interfaces ([::]), which would expose captured mail to the network
@@ -318,14 +326,24 @@ func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 		Args:    nginxArgs,
 		Dir:     nginxDir,
 		LogFile: filepath.Join(root.Logs(), "nginx-console.log"),
-		Stop: func(ctx context.Context, _ int) error {
+		Stop: func(ctx context.Context, pid int) error {
 			// Fast stop: a graceful "quit" waits for open connections (a
 			// browser's keep-alive, a slow request) and made restarts take
 			// 10 s; a local dev server has nothing to drain.
 			cmd := exec.CommandContext(ctx, nginxExe, append(nginxArgs, "-s", "stop")...)
 			cmd.Dir = nginxDir
 			proc.Hide(cmd)
-			return cmd.Run()
+			if err := cmd.Run(); err != nil {
+				return err
+			}
+			// Even "stop" takes about 5 s on Windows while any connection is
+			// mid-request (a half-sent request, a slow PHP page). Give it a
+			// second, then report failure so the supervisor ends it and its
+			// workers, which frees ports 80 and 443 at once.
+			if proc.WaitExit(pid, nginxStopGrace) {
+				return nil
+			}
+			return errNginxSlowStop
 		},
 	})
 
