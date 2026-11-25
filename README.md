@@ -11,10 +11,15 @@
 
 ---
 
-Ebur runs PHP, Nginx and MariaDB on your computer. Every folder you put in
-`www\` is served at `https://<folder>.test`, with a trusted local certificate.
-It downloads official builds, checks every download's SHA-256, and keeps
-everything in one folder.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/sites-dark.png">
+  <img src="docs/screenshots/sites.png" alt="Ebur's Sites tab: five local sites, each on its own PHP version (8.5, 8.3 and a legacy 7.4), all running over HTTPS">
+</picture>
+
+Ebur runs PHP, Nginx, MariaDB or MySQL, Redis and Node.js on your computer.
+Every folder you put in `www\` is served at `https://<folder>.test` (or
+`.localhost`), with a trusted local certificate. It downloads official
+builds, checks every download's SHA-256, and keeps everything in one folder.
 
 > **Status: early development (0.1.0-dev).** Windows 10 21H2+ and Windows 11,
 > x64. Builds are not code-signed yet, so Windows SmartScreen and the
@@ -32,20 +37,33 @@ everything in one folder.
   requirement in its `composer.json`; everything else uses the default,
   which you switch in one click. PHP runs as a pool of workers, so a slow
   request does not block others.
-- **MariaDB** with a generated root password, and **Adminer** at `db.test`.
+- **MariaDB and MySQL** (8.4 LTS, plus legacy 8.0 and 5.7), side by side on
+  their own ports, with generated root passwords and **Adminer** at
+  `db.test`. **Snapshots** save a database before a risky migration and put
+  it back in one click.
+- **New projects:** Laravel, WordPress or Symfony in one step, each with its
+  own database; `ebur link` serves a project that lives outside `www\`.
+- **Node.js** per project (from `.nvmrc` or `package.json`), so Vite and npm
+  work in Ebur's terminal; **Redis** with PHP's redis extension.
+- **Share links:** a temporary public `https://` address for showing a site
+  to a client or testing on a phone; it ends after an hour.
 - **Mail capture:** every email your sites send (password resets, sign-ups)
   lands in a local inbox at `mail.test` (Mailpit) and never reaches real
   people. PHP's `mail()` works with no setup; `ebur mail` shows the Laravel
   and Symfony settings.
 - **Local HTTPS:** Ebur's own certificate authority, limited to `.test` and
   `localhost` names, so its key cannot be used to impersonate real sites.
-- **Composer** included; a terminal with PHP, Composer and MariaDB on `PATH`,
-  without changing the system `PATH`.
+- **Composer** included; a terminal with PHP, Composer, Node and the
+  database clients on `PATH`, without changing the system `PATH`.
 - **Tray app and window** (Sites, Services, Logs, Health, Settings), light or
   dark, and a first-run wizard.
 - **Full command line**: everything the window does, `ebur` does too.
 - **`ebur doctor`** checks ports, runtimes, configs and the hosts file, and
   says how to fix what it finds.
+
+| Databases: MariaDB and MySQL side by side, with snapshots | Services: three PHP versions running at once |
+| --- | --- |
+| ![Databases tab listing databases on MariaDB 12.3 and MySQL 8.4 with their sizes and snapshots](docs/screenshots/databases.png) | ![Services tab in dark mode: Nginx, MariaDB, MySQL, Redis, Mailpit and PHP 7.4, 8.3 and 8.5 pools running](docs/screenshots/services-dark.png) |
 
 ## Quick start
 
@@ -62,7 +80,7 @@ explains what to allow.
 
 ```
 ebur setup                  first-run setup (same as the window's wizard)
-ebur start | stop | restart services: nginx, php, mariadb
+ebur start | stop | restart all services, or name one: nginx, php, mariadb, mysql, redis
 ebur status                 what is running, and the site URLs
 ebur php 8.4                switch the default PHP; restarts in about a second
 ebur sites php shop 8.3     pin one site's PHP (writes www\shop\.ebur)

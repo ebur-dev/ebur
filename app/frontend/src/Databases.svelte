@@ -99,6 +99,7 @@
         {#each list.databases as d}
           <tr>
             <td><strong class="mono">{d.name}</strong><div class="muted small">{d.tables} {d.tables === 1 ? 'table' : 'tables'}</div></td>
+            <td>{d.serverName}</td>
             <td>{d.sites.join(', ') || '—'}</td>
             <td>{size(d.bytes)}</td>
             <td>
