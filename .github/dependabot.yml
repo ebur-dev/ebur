@@ -1,0 +1,25 @@
+# Weekly update proposals as pull requests. Each waits 14 days after a
+# release before proposing it, the same rule used when picking versions
+# by hand, so a compromised release has time to be noticed and pulled.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+
+  - package-ecosystem: npm
+    directory: /app/frontend
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
