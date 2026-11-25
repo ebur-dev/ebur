@@ -35,6 +35,7 @@ you install them, checks each download's SHA-256, and keeps them in `bin\`.
 | PHP | windows.php.net | PHP License 3.01 |
 | Nginx | nginx.org | BSD-2-Clause |
 | MariaDB | mariadb.org | GPL-2.0 |
+| MySQL Community Server (8.4, 8.0, 5.7) | cdn.mysql.com (Oracle) | GPL-2.0 (with Oracle's FOSS exception for client libraries) |
 | Composer | getcomposer.org | MIT |
 | Mailpit (mail capture) | github.com/axllent/mailpit | MIT |
 | Node.js (with npm and Corepack) | nodejs.org | MIT (Node.js; bundled parts under their own licences, see its LICENSE) |

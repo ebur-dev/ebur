@@ -143,6 +143,35 @@
         "notes": "TOOL-03 mail capture; sha256 from the GitHub release digest; 1.34.0 fixes GHSA-v887-64wg-qqc9 (SMTP crash)"
       }
     ],
+    "mysql": [
+      {
+        "version": "8.4.13.1",
+        "url": "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.13.1-winx64.zip",
+        "sha256": "b96b13299bd0e74deaf543ae77d7aea5dac57bfae24ae30902d8899912a43382",
+        "root": "mysql-8.4.13.1-winx64",
+        "arch": "x64",
+        "notes": "MySQL 8.4 LTS; Oracle MD5 d05e97a33b1bb0f49d88f09447bc3f9c and GPG signature (key B7B3B788A8D3785C) checked before pinning sha256",
+        "eol": "2032-04-30"
+      },
+      {
+        "version": "8.0.46",
+        "url": "https://cdn.mysql.com/Downloads/MySQL-8.0/mysql-8.0.46-winx64.zip",
+        "sha256": "28e9eda019d88eff4478d811ea2110b83f02a3966be157fe91cc55def3ab0d4d",
+        "root": "mysql-8.0.46-winx64",
+        "arch": "x64",
+        "notes": "legacy: end of life, for parity with MySQL 8.0 servers; Oracle MD5 003f527d5df61b663ff191038cd676bd and GPG signature (key B7B3B788A8D3785C) checked",
+        "eol": "2026-04-30"
+      },
+      {
+        "version": "5.7.44",
+        "url": "https://cdn.mysql.com/archives/mysql-5.7/mysql-5.7.44-winx64.zip",
+        "sha256": "aed661fe8120254a1dc30f5a4d5de346681922f4847cf025e2d4084eca78e70e",
+        "root": "mysql-5.7.44-winx64",
+        "arch": "x64",
+        "notes": "legacy: end of life, for old projects only; needs the Visual C++ 2013 runtime; Oracle MD5 7452012c6c03c05ccda60b0c01626204 and GPG signature (key 467B942D3A79BD29) checked",
+        "eol": "2023-10-31"
+      }
+    ],
     "redis": [
       {
         "version": "8.10.3",

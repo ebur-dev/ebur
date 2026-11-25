@@ -80,7 +80,8 @@ func TestRefusals(t *testing.T) {
 		{Options{Name: "ok", Kind: "drupal"}, "unknown project type"},
 		{Options{Name: "ok", Kind: Blank, PHP: "7.4"}, "PHP 7.4 is not installed"},
 		{Options{Name: "ok", Kind: Laravel}, "Composer is not installed"},
-		{Options{Name: "ok", Kind: WordPress}, "MariaDB is not installed"},
+		{Options{Name: "ok", Kind: WordPress}, "no database server is installed"},
+		{Options{Name: "ok", Kind: WordPress, DB: "postgres"}, "unknown database server"},
 	}
 	for _, c := range cases {
 		_, err := Create(context.Background(), root, c.o, nil, nil)

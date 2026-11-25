@@ -127,7 +127,32 @@
     setTimeout(() => (copied = ''), 1500)
   }
 
-  let envLine = $derived(db ? `DB_HOST=127.0.0.1\nDB_PORT=${db.port}\nDB_USERNAME=${db.user}\nDB_PASSWORD=${db.password}` : '')
+  // .env for the server new projects use (each server has its own port).
+  let envLine = $derived.by(() => {
+    const s = db?.servers.find((x) => x.default) ?? db?.servers[0]
+    return s ? `DB_CONNECTION=mysql\nDB_HOST=127.0.0.1\nDB_PORT=${s.port}\nDB_USERNAME=${db.user}\nDB_PASSWORD=${db.password}` : ''
+  })
+
+  let dbBusy = $state('')
+  let dbError = $state('')
+  let mysqlPick = $state('')
+  let mysqlInstalled = $derived(db ? db.mysql.filter((o) => o.installed) : [])
+  let mysqlAvailable = $derived(db ? db.mysql.filter((o) => !o.installed) : [])
+  $effect(() => {
+    if (mysqlAvailable.length && !mysqlAvailable.some((o) => o.series === mysqlPick)) mysqlPick = mysqlAvailable[0].series
+  })
+  async function dbAction(method, arg, label) {
+    dbBusy = label
+    dbError = ''
+    try {
+      db = await call(method, arg)
+    } catch (e) {
+      dbError = errorText(e)
+      db = await call('Database')
+    } finally {
+      dbBusy = ''
+    }
+  }
 </script>
 
 <h2>Settings</h2>
@@ -147,12 +172,50 @@
     <h3>Database</h3>
     {#if !db}
       <p class="muted">Loading…</p>
-    {:else if !db.installed}
-      <p class="muted">No database installed. In a terminal, run <code>ebur install mariadb</code>.</p>
     {:else}
+      {#if db.servers.length === 0}
+        <p class="muted">No database server installed yet.</p>
+      {/if}
+      <ul class="servers">
+        {#each db.servers as s}
+          <li>
+            <strong>{s.name}</strong> <span class="mono muted">127.0.0.1:{s.port}</span>
+            {#if s.default && db.servers.length > 1}<span class="tag">new projects</span>{/if}
+            {#if s.eol}<div class="warn small">End of life since {s.eol}: for old projects only.</div>{/if}
+          </li>
+        {/each}
+      </ul>
+      {#if db.servers.length > 1}
+        <label class="pick">
+          <span class="muted">New projects use</span>
+          <select value={db.servers.find((s) => s.default)?.kind} disabled={!!dbBusy} onchange={(e) => dbAction('SetDefaultDB', e.currentTarget.value, 'Saving…')}>
+            {#each db.servers as s}<option value={s.kind}>{s.name}</option>{/each}
+          </select>
+        </label>
+      {/if}
+      {#if mysqlInstalled.length > 1}
+        <label class="pick">
+          <span class="muted">MySQL version</span>
+          <select value={db.servers.find((s) => s.kind === 'mysql')?.version} disabled={!!dbBusy} onchange={(e) => dbAction('SetMySQL', e.currentTarget.value, 'Switching MySQL…')}>
+            {#each mysqlInstalled as o}<option value={o.version}>MySQL {o.version}{o.legacy ? ' (end of life)' : ''}</option>{/each}
+          </select>
+        </label>
+      {/if}
+      {#if mysqlAvailable.length}
+        <div class="row">
+          <select bind:value={mysqlPick} disabled={!!dbBusy}>
+            {#each mysqlAvailable as o}<option value={o.series}>MySQL {o.series}{o.legacy ? ` (end of life ${o.eol})` : ' LTS'}</option>{/each}
+          </select>
+          <button class={db.servers.some((s) => s.kind === 'mysql') ? '' : 'primary'} disabled={!!dbBusy || !mysqlPick} onclick={() => dbAction('InstallMySQL', mysqlPick, `Installing MySQL ${mysqlPick} (about 250-350 MB)…`)}>
+            {dbBusy || 'Install MySQL'}
+          </button>
+        </div>
+        <p class="muted note">MySQL runs next to MariaDB on its own port, so a project can match a MySQL production server. 5.7 needs Microsoft's Visual C++ 2013 runtime.</p>
+      {/if}
+      {#if dbError}<pre class="err">{dbError}</pre>{/if}
+    {/if}
+    {#if db && db.servers.length}
       <dl>
-        <dt>Server</dt><dd>MariaDB {db.version}</dd>
-        <dt>Host</dt><dd class="mono">127.0.0.1:{db.port}</dd>
         <dt>User</dt><dd class="mono">{db.user}</dd>
         <dt>Password</dt>
         <dd class="mono">
@@ -333,6 +396,9 @@
   .note { margin: 10px 0 0; font-size: 13px; }
   .small { font-size: 12px; }
   .pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .servers { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 22%, transparent); margin-left: 6px; }
+  .warn { color: var(--gold); }
   .versions { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 4px; }
   .versions li { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }

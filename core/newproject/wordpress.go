@@ -108,7 +108,7 @@ func (r runner) wordpress(ctx context.Context, tmp string, res Result) error {
 	if err != nil {
 		return err
 	}
-	cfg, err := wpConfig(string(sample), res.Database, r.cfg.DBRootPassword, fmt.Sprintf("127.0.0.1:%d", r.cfg.DBPort))
+	cfg, err := wpConfig(string(sample), res.Database, r.cfg.DBRootPassword, fmt.Sprintf("127.0.0.1:%d", r.db.c.Server.Port))
 	if err != nil {
 		return err
 	}

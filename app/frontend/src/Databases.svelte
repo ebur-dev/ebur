@@ -35,24 +35,27 @@
     }
   }
 
-  const save = (db) =>
-    act(`Saving a snapshot of ${db}…`, async () => {
-      const s = await call('SnapshotDB', db, label)
+  // Rows are keyed by server and name: MariaDB and MySQL can both have "shop".
+  const key = (d) => d.server + '/' + d.name
+
+  const save = (d) =>
+    act(`Saving a snapshot of ${d.name}…`, async () => {
+      const s = await call('SnapshotDB', d.server, d.name, label)
       labeling = ''
       label = ''
-      open[db] = true
+      open[key(d)] = true
       return `Saved ${s.name} (${size(s.bytes)}).`
     })
 
-  const restore = (db, snap) =>
-    act(`Restoring ${db}…`, async () => {
-      const r = await call('RestoreDB', db, snap.name)
-      return `Restored ${db} from ${snap.name}.` + (r.backup ? ` The data it replaced was saved as ${r.backup.name}; restore that to undo.` : '')
+  const restore = (d, snap) =>
+    act(`Restoring ${d.name}…`, async () => {
+      const r = await call('RestoreDB', d.server, d.name, snap.name)
+      return `Restored ${d.name} on ${d.serverName} from ${snap.name}.` + (r.backup ? ` The data it replaced was saved as ${r.backup.name}; restore that to undo.` : '')
     })
 
-  const remove = (db, snap) =>
+  const remove = (d, snap) =>
     act('Deleting…', async () => {
-      await call('DeleteSnapshot', db, snap.name)
+      await call('DeleteSnapshot', d.server, d.name, snap.name)
       return `Deleted snapshot ${snap.name}.`
     })
 
@@ -80,10 +83,10 @@
 {#if !list}
   <p class="muted">Loading…</p>
 {:else if !list.installed}
-  <div class="card"><p>No database is installed. In a terminal, run <code>ebur install mariadb</code>.</p></div>
+  <div class="card"><p>No database server is installed. Add MariaDB or MySQL in Settings, or run <code>ebur install mysql 8.4</code>.</p></div>
 {:else if !list.running}
   <div class="card">
-    <p>MariaDB is not running, so its databases cannot be listed.</p>
+    <p>The database servers are not running, so their databases cannot be listed.</p>
     <button class="primary" onclick={async () => { await run('Starting…', 'Start'); load() }}>Start services</button>
   </div>
 {:else if list.databases.length === 0}
@@ -91,7 +94,7 @@
 {:else}
   <div class="card flush">
     <table>
-      <thead><tr><th>Database</th><th>Site</th><th>Size</th><th>Snapshots</th><th></th></tr></thead>
+      <thead><tr><th>Database</th><th>Server</th><th>Site</th><th>Size</th><th>Snapshots</th><th></th></tr></thead>
       <tbody>
         {#each list.databases as d}
           <tr>
@@ -100,23 +103,23 @@
             <td>{size(d.bytes)}</td>
             <td>
               {#if d.snapshots.length}
-                <button class="link" onclick={() => (open[d.name] = !open[d.name])}>{d.snapshots.length} saved {open[d.name] ? '▴' : '▾'}</button>
+                <button class="link" onclick={() => (open[key(d)] = !open[key(d)])}>{d.snapshots.length} saved {open[key(d)] ? '▴' : '▾'}</button>
               {:else}<span class="muted">none</span>{/if}
             </td>
             <td class="actions">
-              {#if labeling === d.name}
+              {#if labeling === key(d)}
                 <input bind:value={label} placeholder="label (optional)" maxlength="40"
-                  onkeydown={(e) => e.key === 'Enter' && save(d.name)} />
-                <button class="primary" disabled={!!busy} onclick={() => save(d.name)}>Save</button>
+                  onkeydown={(e) => e.key === 'Enter' && save(d)} />
+                <button class="primary" disabled={!!busy} onclick={() => save(d)}>Save</button>
                 <button disabled={!!busy} onclick={() => { labeling = ''; label = '' }}>Cancel</button>
               {:else}
-                <button disabled={!!busy} onclick={() => { labeling = d.name; label = '' }}>Snapshot…</button>
+                <button disabled={!!busy} onclick={() => { labeling = key(d); label = '' }}>Snapshot…</button>
               {/if}
             </td>
           </tr>
-          {#if open[d.name] && d.snapshots.length}
+          {#if open[key(d)] && d.snapshots.length}
             <tr class="snaps">
-              <td colspan="5">
+              <td colspan="6">
                 <ul>
                   {#each d.snapshots as s}
                     <li>
@@ -124,20 +127,20 @@
                       {#if s.label}<span class="tag" class:auto={s.auto}>{s.auto ? 'before a restore' : s.label}</span>{/if}
                       <span class="muted small">{size(s.bytes)}</span>
                       <span class="spacer"></span>
-                      {#if confirm && confirm.snap.name === s.name && confirm.db === d.name}
+                      {#if confirm && confirm.snap.name === s.name && confirm.db === key(d)}
                         <span class="ask">
                           {#if confirm.kind === 'restore'}
                             Replace <strong>{d.name}</strong> with this snapshot? Its current data is saved first.
-                            <button class="primary" disabled={!!busy} onclick={() => restore(d.name, s)}>Restore</button>
+                            <button class="primary" disabled={!!busy} onclick={() => restore(d, s)}>Restore</button>
                           {:else}
                             Delete this snapshot file?
-                            <button class="danger" disabled={!!busy} onclick={() => remove(d.name, s)}>Delete</button>
+                            <button class="danger" disabled={!!busy} onclick={() => remove(d, s)}>Delete</button>
                           {/if}
                           <button disabled={!!busy} onclick={() => (confirm = null)}>Cancel</button>
                         </span>
                       {:else}
-                        <button disabled={!!busy} onclick={() => (confirm = { kind: 'restore', db: d.name, snap: s })}>Restore…</button>
-                        <button class="link small" disabled={!!busy} onclick={() => (confirm = { kind: 'delete', db: d.name, snap: s })}>Delete</button>
+                        <button disabled={!!busy} onclick={() => (confirm = { kind: 'restore', db: key(d), snap: s })}>Restore…</button>
+                        <button class="link small" disabled={!!busy} onclick={() => (confirm = { kind: 'delete', db: key(d), snap: s })}>Delete</button>
                       {/if}
                     </li>
                   {/each}

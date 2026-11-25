@@ -13,7 +13,7 @@ import (
 
 // newCmd creates a project from a starter (PROJ-01/02).
 func newCmd() *cobra.Command {
-	var php string
+	var php, db string
 	kinds := map[newproject.Kind]*bool{}
 	c := &cobra.Command{
 		Use:   "new <name> [--laravel | --wordpress | --symfony | --blank]",
@@ -52,7 +52,7 @@ func newCmd() *cobra.Command {
 			ctx, cancel := signalContext()
 			defer cancel()
 			fmt.Printf("Creating %s (%s)\n", args[0], kind.Label())
-			res, err := newproject.Create(ctx, root, newproject.Options{Name: args[0], Kind: kind, PHP: php},
+			res, err := newproject.Create(ctx, root, newproject.Options{Name: args[0], Kind: kind, PHP: php, DB: db},
 				func(step string) { fmt.Println("==>", step) }, os.Stdout)
 			if err != nil {
 				hint := "Nothing was kept: no folder in www\\ and no new database."
@@ -76,5 +76,6 @@ func newCmd() *cobra.Command {
 		kinds[k] = c.Flags().Bool(string(k), false, "create a "+k.Label()+" project")
 	}
 	c.Flags().StringVar(&php, "php", "", "pin a PHP version for this site, e.g. 8.3 (default: Ebur's default PHP)")
+	c.Flags().StringVar(&db, "db", "", "database server, mariadb or mysql, when both are installed (default: `ebur db default`)")
 	return c
 }

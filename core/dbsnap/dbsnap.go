@@ -21,19 +21,21 @@ import (
 	"time"
 
 	"github.com/ebur-dev/ebur/core/dbclient"
+	"github.com/ebur-dev/ebur/core/dbserver"
 	"github.com/ebur-dev/ebur/core/paths"
 	"github.com/ebur-dev/ebur/internal/fsutil"
 )
 
 // Snapshot is one saved copy of a database.
 type Snapshot struct {
-	Database string    `json:"database"`
-	Name     string    `json:"name"`  // e.g. 2026-11-25_143012_before-upgrade
-	Label    string    `json:"label"` // e.g. before-upgrade; "" if none
-	Time     time.Time `json:"time"`
-	Bytes    int64     `json:"bytes"` // compressed size on disk
-	Auto     bool      `json:"auto"`  // saved by Ebur before a restore
-	Path     string    `json:"path"`
+	Server   dbserver.Kind `json:"server"` // mariadb or mysql
+	Database string        `json:"database"`
+	Name     string        `json:"name"`  // e.g. 2026-11-25_143012_before-upgrade
+	Label    string        `json:"label"` // e.g. before-upgrade; "" if none
+	Time     time.Time     `json:"time"`
+	Bytes    int64         `json:"bytes"` // compressed size on disk
+	Auto     bool          `json:"auto"`  // saved by Ebur before a restore
+	Path     string        `json:"path"`
 }
 
 const (
@@ -48,14 +50,23 @@ var (
 	nameRe  = regexp.MustCompile(`^(\d{4}-\d{2}-\d{2}_\d{6})(?:_([a-z0-9-]{1,40}))?$`)
 )
 
-// Dir is where snapshots are kept.
-func Dir(root paths.Root) string { return filepath.Join(root.Data(), "snapshots") }
+// Dir is where a server's snapshots are kept. MariaDB's are directly in
+// data\snapshots\ (where Ebur has always kept them); MySQL's are in
+// data\snapshots\.mysql\, a name no database can have, so databases with
+// the same name on both servers never mix.
+func Dir(root paths.Root, kind dbserver.Kind) string {
+	base := filepath.Join(root.Data(), "snapshots")
+	if kind == dbserver.MySQL {
+		return filepath.Join(base, ".mysql")
+	}
+	return base
+}
 
-func dbDir(root paths.Root, db string) (string, error) {
+func dbDir(root paths.Root, kind dbserver.Kind, db string) (string, error) {
 	if !dbclient.ValidName(db) || dbclient.IsSystem(db) {
 		return "", fmt.Errorf("invalid database name %q", db)
 	}
-	return filepath.Join(Dir(root), db), nil
+	return filepath.Join(Dir(root, kind), db), nil
 }
 
 // CleanLabel turns free text ("Before upgrade!") into a label
@@ -85,7 +96,7 @@ func CleanLabel(s string) (string, error) {
 
 // Save dumps db into a new snapshot with an optional label.
 func Save(ctx context.Context, c *dbclient.Client, root paths.Root, db, label string) (Snapshot, error) {
-	dir, err := dbDir(root, db)
+	dir, err := dbDir(root, c.Server.Kind, db)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -128,10 +139,10 @@ func Save(ctx context.Context, c *dbclient.Client, root paths.Root, db, label st
 		os.Remove(part)
 		return Snapshot{}, err
 	}
-	return describe(db, path)
+	return describe(c.Server.Kind, db, path)
 }
 
-func describe(db, path string) (Snapshot, error) {
+func describe(kind dbserver.Kind, db, path string) (Snapshot, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return Snapshot{}, err
@@ -145,19 +156,32 @@ func describe(db, path string) (Snapshot, error) {
 	if err != nil {
 		t = fi.ModTime()
 	}
-	return Snapshot{Database: db, Name: name, Label: m[2], Time: t, Bytes: fi.Size(), Auto: m[2] == AutoLabel, Path: path}, nil
+	return Snapshot{Server: kind, Database: db, Name: name, Label: m[2], Time: t, Bytes: fi.Size(), Auto: m[2] == AutoLabel, Path: path}, nil
 }
 
-// List returns db's snapshots, newest first. db "" lists every database's.
-func List(root paths.Root, db string) ([]Snapshot, error) {
+// List returns db's snapshots on one server, newest first. db "" lists
+// every database's; kind "" lists both servers'.
+func List(root paths.Root, kind dbserver.Kind, db string) ([]Snapshot, error) {
+	if kind == "" {
+		var all []Snapshot
+		for _, k := range dbserver.Kinds {
+			s, err := List(root, k, db)
+			if err != nil {
+				return nil, err
+			}
+			all = append(all, s...)
+		}
+		sortNewest(all)
+		return all, nil
+	}
 	var dbs []string
 	if db != "" {
-		if _, err := dbDir(root, db); err != nil {
+		if _, err := dbDir(root, kind, db); err != nil {
 			return nil, err
 		}
 		dbs = []string{db}
 	} else {
-		entries, err := os.ReadDir(Dir(root))
+		entries, err := os.ReadDir(Dir(root, kind))
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
@@ -169,29 +193,33 @@ func List(root paths.Root, db string) ([]Snapshot, error) {
 	}
 	out := []Snapshot{}
 	for _, d := range dbs {
-		files, err := filepath.Glob(filepath.Join(Dir(root), d, "*"+ext))
+		files, err := filepath.Glob(filepath.Join(Dir(root, kind), d, "*"+ext))
 		if err != nil {
 			return nil, err
 		}
 		for _, f := range files {
-			if s, err := describe(d, f); err == nil {
+			if s, err := describe(kind, d, f); err == nil {
 				out = append(out, s)
 			}
 		}
 	}
+	sortNewest(out)
+	return out, nil
+}
+
+func sortNewest(out []Snapshot) {
 	sort.SliceStable(out, func(i, j int) bool {
 		if !out[i].Time.Equal(out[j].Time) {
 			return out[i].Time.After(out[j].Time)
 		}
 		return out[i].Name > out[j].Name
 	})
-	return out, nil
 }
 
 // Find picks one of db's snapshots by full name, "latest", a label, or a
 // unique start of the name such as "2026-11-25_14".
-func Find(root paths.Root, db, ref string) (Snapshot, error) {
-	all, err := List(root, db)
+func Find(root paths.Root, kind dbserver.Kind, db, ref string) (Snapshot, error) {
+	all, err := List(root, kind, db)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -231,7 +259,7 @@ type RestoreResult struct {
 // Restore replaces db's contents with snapshot ref. The current data is
 // saved first; if loading fails it is put back and the error says so.
 func Restore(ctx context.Context, c *dbclient.Client, root paths.Root, db, ref string) (RestoreResult, error) {
-	snap, err := Find(root, db, ref)
+	snap, err := Find(root, c.Server.Kind, db, ref)
 	if err != nil {
 		return RestoreResult{}, err
 	}
@@ -300,8 +328,8 @@ func checkGzip(path string) error {
 }
 
 // Delete removes one snapshot.
-func Delete(root paths.Root, db, ref string) (Snapshot, error) {
-	s, err := Find(root, db, ref)
+func Delete(root paths.Root, kind dbserver.Kind, db, ref string) (Snapshot, error) {
+	s, err := Find(root, kind, db, ref)
 	if err != nil {
 		return s, err
 	}

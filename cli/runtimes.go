@@ -78,11 +78,14 @@ func installRuntime(root paths.Root, name, want string) error {
 	}
 	if sup := install.SupportOf(name, res.Version); sup.Ended {
 		fmt.Printf("\nwarning: %s %s reached end of life on %s and gets no security fixes.\n", name, res.Version, sup.EOL)
-		pin := series(res.Version)
-		if name == "node" {
-			pin = major(res.Version)
+		switch name {
+		case "mysql": // one MySQL version runs at a time, next to MariaDB
+			fmt.Printf("Use it for old projects only: switch with `ebur mysql %s`, and back with `ebur mysql 8.4`.\n", series(res.Version))
+		case "node":
+			fmt.Printf("Use it for old projects only: pin a site with `ebur sites node <site> %s`.\n", major(res.Version))
+		default:
+			fmt.Printf("Use it for old projects only: pin a site with `ebur sites %s <site> %s`.\n", name, series(res.Version))
 		}
-		fmt.Printf("Use it for old projects only: pin a site with `ebur sites %s <site> %s`.\n", name, pin)
 		fmt.Println("Ebur's sites are only reachable from this computer, which limits the risk.")
 	}
 	return nil
@@ -116,8 +119,8 @@ func contains(list []string, s string) bool {
 func installCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "install <runtime> [version]",
-		Short:   "Install a runtime (php, node, nginx, mariadb, adminer, mailpit) from the manifest",
-		Example: "  ebur install nginx\n  ebur install php 8.3\n  ebur install node 24\n  ebur install mariadb\n  ebur install adminer",
+		Short:   "Install a runtime (php, node, nginx, mariadb, mysql, redis, adminer, mailpit) from the manifest",
+		Example: "  ebur install nginx\n  ebur install php 8.3\n  ebur install node 24\n  ebur install mariadb\n  ebur install mysql 8.4      MySQL next to MariaDB (also 8.0, 5.7)\n  ebur install redis\n  ebur install adminer",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := findRoot()

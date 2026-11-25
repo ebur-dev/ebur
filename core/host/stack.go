@@ -254,6 +254,20 @@ func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 		ports = append(ports, cfg.DBPort)
 		info.MariaDB = dbVer
 	}
+	// SVC-01: MySQL runs next to MariaDB, on its own port.
+	mysqlVer, err := optional(root, cfg, "mysql")
+	if err != nil {
+		return Stack{}, err
+	}
+	if mysqlVer != "" {
+		s, port, err := mysqlSpec(root, mysqlVer)
+		if err != nil {
+			return Stack{}, err
+		}
+		specs = append(specs, s)
+		ports = append(ports, port)
+		info.MySQL = mysqlVer
+	}
 	served := found
 	adminerVer, err := optional(root, cfg, "adminer")
 	if err != nil {

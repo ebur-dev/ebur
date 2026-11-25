@@ -17,6 +17,10 @@
   let name = $state('')
   let kind = $state('laravel')
   let php = $state('')
+  // MariaDB or MySQL when both are installed (SVC-01); preset to the default
+  // when the dialog opens (it is created fresh each time).
+  // svelte-ignore state_referenced_locally
+  let dbServer = $state(ov.dbServers.find((s) => s.default)?.kind ?? '')
   let error = $state('')
   let step = $state('')
   let detail = $state('')
@@ -50,7 +54,7 @@
     detail = ''
     page = 'working'
     try {
-      await call('CreateProject', name, kind, php)
+      await call('CreateProject', name, kind, php, needsDB ? dbServer : '')
     } catch (e) {
       error = errorText(e)
       page = 'form'
@@ -92,7 +96,16 @@
         </select>
       </label>
 
-      {#if noDB}<p class="warn">This starter needs MariaDB. Install it from the Services tab first, or choose Blank.</p>{/if}
+      {#if needsDB && ov.dbServers.length > 1}
+        <label class="field">
+          <span>Database</span>
+          <select bind:value={dbServer}>
+            {#each ov.dbServers as s}<option value={s.kind}>{s.name} (port {s.port}){s.eol ? ', end of life' : ''}</option>{/each}
+          </select>
+        </label>
+      {/if}
+
+      {#if noDB}<p class="warn">This starter needs a database server (MariaDB or MySQL). Install one in Settings first, or choose Blank.</p>{/if}
       {#if error}<pre class="err">{error}</pre>{/if}
 
       <div class="actions">

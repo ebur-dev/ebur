@@ -14,6 +14,7 @@ import (
 
 	"github.com/ebur-dev/ebur/core/certs"
 	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/dbserver"
 	"github.com/ebur-dev/ebur/core/install"
 	"github.com/ebur-dev/ebur/core/paths"
 	"github.com/ebur-dev/ebur/core/ports"
@@ -70,6 +71,7 @@ func Run(root paths.Root, opt Options) []Check {
 		{"php", true, "ebur php install 8.4"},
 		{"nginx", true, "ebur install nginx"},
 		{"mariadb", false, "ebur install mariadb"},
+		{"mysql", false, "ebur install mysql 8.4"},
 		{"adminer", false, "ebur install adminer"},
 		{"composer", false, "ebur install composer"},
 		{"mailpit", false, "ebur install mailpit"},
@@ -89,6 +91,18 @@ func Run(root paths.Root, opt Options) []Check {
 	if v := active["mariadb"]; v != "" {
 		add(checkMariaDBData(root, v))
 	}
+	if v := active["mysql"]; v != "" { // SVC-01: MySQL next to MariaDB
+		data, _ := dbserver.Paths(root, dbserver.MySQL, v)
+		if _, err := os.Stat(filepath.Join(data, "mysql")); err != nil {
+			add(Check{"MySQL data", Warn, "not created yet in " + data, "It is created on the next `ebur start`."})
+		} else {
+			add(Check{"MySQL data", OK, data, ""})
+		}
+		if sup := install.SupportOf("mysql", v); sup.Ended {
+			add(Check{"MySQL " + v, Warn, "end of life since " + sup.EOL + " (no security fixes)",
+				"Fine for matching an old server on this computer; plan to move to MySQL 8.4 (`ebur install mysql 8.4`)."})
+		}
+	}
 
 	wanted := []int{80, 9100}
 	if certs.Dir(root.SSL()).Exists() {
@@ -99,6 +113,9 @@ func Run(root paths.Root, opt Options) []Check {
 	}
 	if active["mariadb"] != "" {
 		wanted = append(wanted, cfg.DBPort)
+	}
+	if active["mysql"] != "" && cfg.MySQLPort != 0 {
+		wanted = append(wanted, cfg.MySQLPort)
 	}
 	if active["redis"] != "" {
 		wanted = append(wanted, provision.RedisPort)

@@ -31,7 +31,7 @@ func main() {
 	}
 	root.AddCommand(
 		statusCmd(), startCmd(), stopCmd(), restartCmd(), quitCmd(),
-		phpCmd(), nodeCmd(), installCmd(), sitesCmd(), dbCmd(), mailCmd(), sslCmd(), doctorCmd(),
+		phpCmd(), nodeCmd(), mysqlCmd(), installCmd(), sitesCmd(), dbCmd(), mailCmd(), sslCmd(), doctorCmd(),
 		terminalCmd(), execCmd(), hostsCmd(), setupCmd(), newCmd(), linkCmd(), unlinkCmd(), shareCmd(), daemonCmd(),
 	)
 	enableJSON(root)

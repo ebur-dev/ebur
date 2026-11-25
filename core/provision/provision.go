@@ -51,6 +51,8 @@ func Prepare(ctx context.Context, root paths.Root, runtime, version string, say 
 		return Report{Steps: []string{"nginx runs"}}, nil
 	case "mariadb":
 		return prepareMariaDB(ctx, root, dir, version, say)
+	case "mysql":
+		return prepareMySQL(ctx, root, dir, version, say)
 	case "composer":
 		// A wrapper so `composer` works as a command. It uses whichever PHP
 		// is first on PATH, which in Ebur's terminal is the active one.

@@ -18,7 +18,7 @@ import (
 func terminalCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "terminal",
-		Short: "Open a console with Ebur's PHP, Composer, MariaDB and Nginx on PATH",
+		Short: "Open a console with Ebur's PHP, Composer, Node, database tools and Nginx on PATH",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := findRoot()

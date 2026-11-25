@@ -27,6 +27,10 @@ type DBOption struct {
 	Label   string `json:"label"`
 }
 
+// MySQLChoice prefixes a DB choice that means MySQL rather than MariaDB,
+// e.g. "mysql:8.4.13.1".
+const MySQLChoice = "mysql:"
+
 // Options is what the wizard offers, with sensible defaults.
 type Options struct {
 	NeedsSetup   bool       `json:"needsSetup"`
@@ -101,6 +105,18 @@ func GetOptions(root paths.Root) (Options, error) {
 	}
 	if len(o.DB) > 0 {
 		o.DBDefault = o.DB[0].Version
+	}
+	// SVC-01: MySQL as the first database, to match a MySQL server.
+	// Supported versions only; 8.0 and 5.7 are added later from Settings.
+	for _, r := range m.Releases("mysql", "x64") {
+		if r.EndOfLife(now) {
+			continue
+		}
+		label := "MySQL " + r.Version + ", to match a MySQL 8 production server"
+		if r.EOL != "" {
+			label = "MySQL " + r.Version + " LTS, supported until " + r.EOL[:4] + ", to match a MySQL production server"
+		}
+		o.DB = append(o.DB, DBOption{Version: MySQLChoice + r.Version, Label: label})
 	}
 	o.DBPort, o.DBPortNote = pickDBPort(cfg.DBPort)
 	for _, p := range []int{80, 443} {
@@ -179,7 +195,11 @@ func Run(ctx context.Context, root paths.Root, c Choices, hooks Hooks, emit func
 		{ID: "composer", Label: "Composer"},
 	}
 	if c.DB != "" {
-		steps = append(steps, Step{ID: "mariadb", Label: "MariaDB " + c.DB})
+		label := "MariaDB " + c.DB
+		if v, ok := strings.CutPrefix(c.DB, MySQLChoice); ok {
+			label = "MySQL " + v
+		}
+		steps = append(steps, Step{ID: "mariadb", Label: label})
 		if c.Adminer {
 			steps = append(steps, Step{ID: "adminer", Label: "Adminer (db." + tldOf(root) + ")"})
 		}
@@ -227,7 +247,14 @@ func Run(ctx context.Context, root paths.Root, c Choices, hooks Hooks, emit func
 	if err != nil {
 		return err
 	}
-	if c.DB != "" && c.DBPort > 0 {
+	mysqlVer, isMySQL := strings.CutPrefix(c.DB, MySQLChoice)
+	switch {
+	case isMySQL:
+		if c.DBPort > 0 {
+			cfg.MySQLPort = c.DBPort // before MySQL is prepared, so my.ini uses it
+		}
+		cfg.DefaultDB = "mysql"
+	case c.DB != "" && c.DBPort > 0:
 		cfg.DBPort = c.DBPort // before MariaDB is prepared, so my.ini uses it
 	}
 	delete(cfg.Active, "php") // the chosen version becomes active below
@@ -279,7 +306,11 @@ func Run(ctx context.Context, root paths.Root, c Choices, hooks Hooks, emit func
 		config.Save(root.Config(), cfg)
 	}
 	if c.DB != "" {
-		if err := installStep("mariadb", "mariadb", c.DB); err != nil {
+		rt, ver := "mariadb", c.DB
+		if isMySQL {
+			rt, ver = "mysql", mysqlVer
+		}
+		if err := installStep("mariadb", rt, ver); err != nil { // step ID stays "mariadb" for the window
 			return err
 		}
 		if c.Adminer {

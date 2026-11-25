@@ -41,8 +41,16 @@ type Settings struct {
 	// Laragon's MySQL) already uses 3306.
 	DBPort int `json:"db_port"`
 	// DBRootPassword is generated when the first database is set up
-	// (NFR-09: never blank). Local-only; shown by `ebur db`.
+	// (NFR-09: never blank). Local-only; shown by `ebur db`. MariaDB and
+	// MySQL share it.
 	DBRootPassword string `json:"db_root_password,omitempty"`
+	// MySQLPort is MySQL's port when installed next to MariaDB (SVC-01:
+	// both can run at once). 0 until MySQL is installed, which picks a
+	// free one.
+	MySQLPort int `json:"mysql_port,omitempty"`
+	// DefaultDB is the server new projects use when both are installed:
+	// "mariadb" or "mysql". Empty means MariaDB if installed.
+	DefaultDB string `json:"default_db,omitempty"`
 }
 
 // Defaults returns the settings used for a fresh install.
@@ -92,6 +100,16 @@ func (s Settings) Validate() error {
 	}
 	if s.DBPort < 1024 || s.DBPort > 65535 {
 		return fmt.Errorf("config: db_port %d must be between 1024 and 65535", s.DBPort)
+	}
+	// mysql_port may equal db_port when MariaDB is not installed (MySQL
+	// alone); when both run, the start-up port check reports a clash.
+	if s.MySQLPort != 0 && (s.MySQLPort < 1024 || s.MySQLPort > 65535) {
+		return fmt.Errorf("config: mysql_port %d must be between 1024 and 65535", s.MySQLPort)
+	}
+	switch s.DefaultDB {
+	case "", "mariadb", "mysql":
+	default:
+		return fmt.Errorf("config: unknown default_db %q (use mariadb or mysql)", s.DefaultDB)
 	}
 	return nil
 }

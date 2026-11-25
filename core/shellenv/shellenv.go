@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/dbserver"
 	"github.com/ebur-dev/ebur/core/paths"
 	"github.com/ebur-dev/ebur/core/project"
 	"github.com/ebur-dev/ebur/core/runtimes"
@@ -89,8 +90,15 @@ func build(root paths.Root, cfg config.Settings, env Env, v string) Env {
 	if env.Node != "" {
 		env.Path = append(env.Path, root.RuntimeDir("node", env.Node)) // node, npm, npx, corepack
 	}
-	if v := active(root, cfg, "mariadb"); v != "" {
-		env.Path = append(env.Path, filepath.Join(root.RuntimeDir("mariadb", v), "bin"))
+	// Database tools: both servers ship a `mysql` command, so the default
+	// server (the one new projects use) comes first (SVC-01).
+	if def, ok := dbserver.Default(root, cfg); ok {
+		env.Path = append(env.Path, filepath.Join(def.Dir, "bin"))
+		for _, s := range dbserver.Installed(root, cfg) {
+			if s.Kind != def.Kind {
+				env.Path = append(env.Path, filepath.Join(s.Dir, "bin"))
+			}
+		}
 	}
 	if v := active(root, cfg, "nginx"); v != "" {
 		env.Path = append(env.Path, root.RuntimeDir("nginx", v))

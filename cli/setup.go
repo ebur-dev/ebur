@@ -43,11 +43,15 @@ func setupCmd() *cobra.Command {
 			if ch.PHP == "" {
 				ch.PHP = opts.PHPDefault
 			}
-			switch ch.DB {
-			case "":
+			switch {
+			case ch.DB == "":
 				ch.DB = opts.DBDefault
-			case "none":
+			case ch.DB == "none":
 				ch.DB = ""
+			case ch.DB == "mysql": // newest supported MySQL (SVC-01)
+				ch.DB = setup.MySQLChoice + "8.4"
+			case strings.HasPrefix(ch.DB, "mysql:"):
+				ch.DB = setup.MySQLChoice + strings.TrimPrefix(ch.DB, "mysql:")
 			}
 			if ch.DBPort == 0 {
 				ch.DBPort = opts.DBPort
@@ -55,7 +59,11 @@ func setupCmd() *cobra.Command {
 			fmt.Printf("Ebur setup in %s\n", opts.Root)
 			fmt.Printf("  Web server: %s\n  PHP:        %s\n", opts.WebServer, ch.PHP)
 			if ch.DB != "" {
-				fmt.Printf("  Database:   MariaDB %s on port %d", ch.DB, ch.DBPort)
+				server := "MariaDB " + ch.DB
+				if v, ok := strings.CutPrefix(ch.DB, setup.MySQLChoice); ok {
+					server = "MySQL " + v
+				}
+				fmt.Printf("  Database:   %s on port %d", server, ch.DBPort)
 				if ch.Adminer {
 					fmt.Print(", with Adminer")
 				}
@@ -113,7 +121,7 @@ func setupCmd() *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&php, "php", "", "PHP version, e.g. 8.4 (default: recommended)")
-	c.Flags().StringVar(&db, "db", "", `MariaDB version, e.g. 12.3, or "none" (default: newest LTS)`)
+	c.Flags().StringVar(&db, "db", "", `database: MariaDB version (e.g. 12.3), "mysql" or "mysql:8.4" for MySQL, or "none" (default: newest MariaDB LTS)`)
 	c.Flags().IntVar(&dbPort, "db-port", 0, "database port (default: 3306, or the next free one)")
 	c.Flags().BoolVar(&noAdminer, "no-adminer", false, "do not install Adminer")
 	c.Flags().BoolVar(&noMail, "no-mail", false, "do not install Mailpit (mail capture)")

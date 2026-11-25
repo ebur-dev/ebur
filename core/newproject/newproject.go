@@ -22,6 +22,7 @@ import (
 
 	"github.com/ebur-dev/ebur/core/certs"
 	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/dbserver"
 	"github.com/ebur-dev/ebur/core/paths"
 	"github.com/ebur-dev/ebur/core/provision"
 	"github.com/ebur-dev/ebur/core/runtimes"
@@ -67,6 +68,9 @@ type Options struct {
 	Name string
 	Kind Kind
 	PHP  string // optional: pin this PHP version in the site's .ebur file
+	// DB is the database server: "mariadb" or "mysql" when both are
+	// installed (SVC-01); "" means the default one.
+	DB string
 }
 
 // Result describes the created project.
@@ -126,7 +130,7 @@ func Create(ctx context.Context, root paths.Root, o Options, say func(string), o
 	}
 	var db *database
 	if o.Kind.usesDatabase() {
-		if db, err = openDatabase(root); err != nil {
+		if db, err = openDatabase(root, o.DB); err != nil {
 			return Result{}, err
 		}
 		if err := db.ping(ctx); err != nil {
@@ -281,7 +285,7 @@ func (r runner) laravel(ctx context.Context, tmp string, res Result) error {
 	vars := map[string]string{
 		"DB_CONNECTION": "mysql",
 		"DB_HOST":       "127.0.0.1",
-		"DB_PORT":       fmt.Sprint(r.cfg.DBPort),
+		"DB_PORT":       fmt.Sprint(r.db.c.Server.Port),
 		"DB_DATABASE":   res.Database,
 		"DB_USERNAME":   "root",
 		"DB_PASSWORD":   r.cfg.DBRootPassword,
@@ -324,10 +328,15 @@ func (r runner) symfony(ctx context.Context, tmp string, res Result) error {
 		return err
 	}
 	r.say("Writing database and mail settings to .env.local")
-	mariadb := activeOf(r.root, r.cfg, "mariadb")
+	srv := r.db.c.Server
+	// Doctrine needs the exact server: "12.3.4-MariaDB" or "8.4.13".
+	serverVersion := srv.Version + "-MariaDB"
+	if srv.Kind == dbserver.MySQL {
+		serverVersion = strings.Join(strings.SplitN(srv.Version, ".", 4)[:3], ".")
+	}
 	vars := map[string]string{
-		"DATABASE_URL": fmt.Sprintf("mysql://root:%s@127.0.0.1:%d/%s?serverVersion=%s-MariaDB&charset=utf8mb4",
-			urlEscape(r.cfg.DBRootPassword), r.cfg.DBPort, res.Database, mariadb),
+		"DATABASE_URL": fmt.Sprintf("mysql://root:%s@127.0.0.1:%d/%s?serverVersion=%s&charset=utf8mb4",
+			urlEscape(r.cfg.DBRootPassword), srv.Port, res.Database, serverVersion),
 		"DEFAULT_URI": res.URL,
 	}
 	if mailInstalled(r.root) {

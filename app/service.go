@@ -19,8 +19,6 @@ import (
 
 	"github.com/ebur-dev/ebur/core/certs"
 	"github.com/ebur-dev/ebur/core/config"
-	"github.com/ebur-dev/ebur/core/dbclient"
-	"github.com/ebur-dev/ebur/core/dbsnap"
 	"github.com/ebur-dev/ebur/core/doctor"
 	"github.com/ebur-dev/ebur/core/host"
 	"github.com/ebur-dev/ebur/core/hostsfile"
@@ -120,6 +118,7 @@ type Overview struct {
 	Adminer      bool            `json:"adminer"`
 	Mail         bool            `json:"mail"` // Mailpit installed (TOOL-03)
 	DBInstalled  bool            `json:"dbInstalled"`
+	DBServers    []DBServerInfo  `json:"dbServers"`
 	ShareReady   bool            `json:"shareReady"` // cloudflared installed (TOOL-04)
 	TLD          string          `json:"tld"`
 	Root         string          `json:"root"`
@@ -179,7 +178,7 @@ type ProjectFinished struct {
 
 // CreateProject starts creating a site from a starter (PROJ-01/02) in the
 // background, like `ebur new`. kind is laravel, wordpress, symfony or blank.
-func (a *App) CreateProject(name, kind, php string) error {
+func (a *App) CreateProject(name, kind, php, db string) error {
 	a.projectMu.Lock()
 	if a.projectRunning {
 		a.projectMu.Unlock()
@@ -209,7 +208,7 @@ func (a *App) CreateProject(name, kind, php string) error {
 			var st host.Status
 			a.b.call("start", host.Selection{}, &st) // the database must run; Create explains if it does not
 		}
-		res, err := newproject.Create(ctx, a.root, newproject.Options{Name: name, Kind: k, PHP: php}, say, out)
+		res, err := newproject.Create(ctx, a.root, newproject.Options{Name: name, Kind: k, PHP: php, DB: db}, say, out)
 		fin := ProjectFinished{OK: err == nil, Result: res}
 		if err != nil {
 			fin.Error = err.Error()
@@ -298,8 +297,8 @@ func (a *App) Overview() (Overview, error) {
 	ov.Adminer = len(adminer) > 0
 	mail, _ := runtimes.Installed(a.root, "mailpit")
 	ov.Mail = len(mail) > 0
-	db, _ := runtimes.Installed(a.root, "mariadb")
-	ov.DBInstalled = len(db) > 0
+	ov.DBServers = a.servers(false) // MariaDB and/or MySQL (SVC-01)
+	ov.DBInstalled = len(ov.DBServers) > 0
 	cf, _ := runtimes.Installed(a.root, "cloudflared")
 	ov.ShareReady = len(cf) > 0
 	if ov.Status.Shares == nil {
@@ -576,35 +575,6 @@ func (a *App) Doctor() []doctor.Check {
 }
 
 // DBInfo is what the Database panel shows.
-type DBInfo struct {
-	Installed bool   `json:"installed"`
-	Version   string `json:"version"`
-	Port      int    `json:"port"`
-	User      string `json:"user"`
-	Password  string `json:"password"`
-	Adminer   string `json:"adminer"`
-}
-
-func (a *App) Database() DBInfo {
-	cfg, _ := config.Load(a.root.Config())
-	inst, _ := runtimes.Installed(a.root, "mariadb")
-	info := DBInfo{Installed: len(inst) > 0, Port: cfg.DBPort, User: "root", Password: cfg.DBRootPassword}
-	if info.Installed {
-		info.Version = cfg.Active["mariadb"]
-		if info.Version == "" {
-			info.Version = inst[0]
-		}
-	}
-	if ad, _ := runtimes.Installed(a.root, "adminer"); len(ad) > 0 {
-		scheme := "http"
-		if certs.Dir(a.root.SSL()).Exists() {
-			scheme = "https"
-		}
-		info.Adminer = scheme + "://db." + cfg.TLD
-	}
-	return info
-}
-
 // MailInfo is what the Mail capture card shows (TOOL-03).
 type MailInfo struct {
 	Installed bool   `json:"installed"`
@@ -760,107 +730,6 @@ func (a *App) RemoveNode(version string) (NodeInfo, error) {
 		config.Save(a.root.Config(), cfg)
 	}
 	return a.Node(), a.after(nil)
-}
-
-// DBRow is one database on the Databases tab (TOOL-05).
-type DBRow struct {
-	Name      string            `json:"name"`
-	Tables    int               `json:"tables"`
-	Bytes     int64             `json:"bytes"`
-	Sites     []string          `json:"sites"`
-	Snapshots []dbsnap.Snapshot `json:"snapshots"`
-}
-
-// DBList is the Databases tab: databases, or why they cannot be listed.
-type DBList struct {
-	Installed bool    `json:"installed"`
-	Running   bool    `json:"running"`
-	Databases []DBRow `json:"databases"`
-	Folder    string  `json:"folder"`
-}
-
-func (a *App) Databases() DBList {
-	out := DBList{Databases: []DBRow{}, Folder: dbsnap.Dir(a.root)}
-	c, err := dbclient.Open(a.root)
-	if err != nil {
-		return out
-	}
-	out.Installed = true
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	dbs, err := c.Databases(ctx)
-	if err != nil {
-		return out
-	}
-	out.Running = true
-	cfg, _ := config.Load(a.root.Config())
-	found, _, _ := sites.Scan(a.root.WWW(), cfg.TLD)
-	siteOf := map[string][]string{}
-	for _, s := range found {
-		db, _ := dbsnap.SiteDatabase(s.Dir, s.Name)
-		siteOf[db] = append(siteOf[db], s.Name)
-	}
-	snaps, _ := dbsnap.List(a.root, "")
-	for _, d := range dbs {
-		row := DBRow{Name: d.Name, Tables: d.Tables, Bytes: d.Bytes, Sites: siteOf[d.Name], Snapshots: []dbsnap.Snapshot{}}
-		if row.Sites == nil {
-			row.Sites = []string{}
-		}
-		for _, s := range snaps {
-			if s.Database == d.Name {
-				row.Snapshots = append(row.Snapshots, s)
-			}
-		}
-		out.Databases = append(out.Databases, row)
-	}
-	return out
-}
-
-func (a *App) dbClient() (*dbclient.Client, error) {
-	c, err := dbclient.Open(a.root)
-	if err != nil {
-		return nil, withHint(err)
-	}
-	return c, nil
-}
-
-// SnapshotDB saves a snapshot of db with an optional label.
-func (a *App) SnapshotDB(db, label string) (dbsnap.Snapshot, error) {
-	c, err := a.dbClient()
-	if err != nil {
-		return dbsnap.Snapshot{}, err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
-	defer cancel()
-	s, err := dbsnap.Save(ctx, c, a.root, db, label)
-	return s, withHint(err)
-}
-
-// RestoreDB replaces db with a snapshot; the current data is saved first.
-func (a *App) RestoreDB(db, name string) (dbsnap.RestoreResult, error) {
-	c, err := a.dbClient()
-	if err != nil {
-		return dbsnap.RestoreResult{}, err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
-	defer cancel()
-	res, err := dbsnap.Restore(ctx, c, a.root, db, name)
-	return res, withHint(err)
-}
-
-// DeleteSnapshot removes one snapshot file; the database is not touched.
-func (a *App) DeleteSnapshot(db, name string) error {
-	_, err := dbsnap.Delete(a.root, db, name)
-	return withHint(err)
-}
-
-// OpenSnapshots opens the snapshots folder in Explorer.
-func (a *App) OpenSnapshots() error {
-	dir := dbsnap.Dir(a.root)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	return openFolder(dir)
 }
 
 // SSLInfo is what the HTTPS panel shows.

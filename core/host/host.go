@@ -54,6 +54,7 @@ type Info struct {
 	Adminer     string          `json:"adminer,omitempty"` // URL
 	Mail        string          `json:"mail,omitempty"`    // Mailpit URL (TOOL-03)
 	Redis       string          `json:"redis,omitempty"`   // Redis version (SVC-05)
+	MySQL       string          `json:"mysql,omitempty"`   // MySQL version, next to MariaDB (SVC-01)
 	Sites       []sites.Site    `json:"sites"`
 	Skipped     []sites.Skipped `json:"skipped,omitempty"`
 }

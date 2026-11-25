@@ -1,5 +1,6 @@
-// Package dbclient runs SQL, dumps and loads against Ebur's MariaDB
-// through MariaDB's own command-line tools, as root on 127.0.0.1.
+// Package dbclient runs SQL, dumps and loads against Ebur's database
+// servers (MariaDB, and MySQL next to it) through each server's own
+// command-line tools, as root on 127.0.0.1.
 package dbclient
 
 import (
@@ -16,41 +17,65 @@ import (
 	"strings"
 
 	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/dbserver"
 	"github.com/ebur-dev/ebur/core/paths"
-	"github.com/ebur-dev/ebur/core/runtimes"
+	"github.com/ebur-dev/ebur/core/provision"
 	"github.com/ebur-dev/ebur/internal/proc"
 )
 
-// ErrNotInstalled means no MariaDB is installed.
-var ErrNotInstalled = errors.New("MariaDB is not installed; run `ebur install mariadb`")
+// ErrNotInstalled means no database server is installed.
+var ErrNotInstalled = errors.New("no database server is installed; run `ebur install mariadb` or `ebur install mysql 8.4`")
 
 // ErrNotRunning means the server did not answer.
 var ErrNotRunning = errors.New("the database is not running; start Ebur first (`ebur start`)")
 
-// Client talks to the active MariaDB.
+// Client talks to one database server.
 type Client struct {
-	bin      string // MariaDB's bin folder
+	Server   dbserver.Server
 	Version  string
-	port     int
 	password string
+	cnf      string // MySQL: client option file holding the login
 }
 
-// Open finds the active MariaDB. It does not connect.
+// Open finds the default server (see dbserver.Default). It does not connect.
 func Open(root paths.Root) (*Client, error) {
 	cfg, err := config.Load(root.Config())
 	if err != nil {
 		return nil, err
 	}
-	v := cfg.Active["mariadb"]
-	if v == "" {
-		if inst, _ := runtimes.Installed(root, "mariadb"); len(inst) > 0 {
-			v = inst[0]
-		}
-	}
-	if v == "" {
+	s, ok := dbserver.Default(root, cfg)
+	if !ok {
 		return nil, ErrNotInstalled
 	}
-	return &Client{bin: filepath.Join(root.RuntimeDir("mariadb", v), "bin"), Version: v, port: cfg.DBPort, password: cfg.DBRootPassword}, nil
+	return OpenServer(root, cfg, s)
+}
+
+// OpenKind opens the installed server of kind.
+func OpenKind(root paths.Root, kind dbserver.Kind) (*Client, error) {
+	cfg, err := config.Load(root.Config())
+	if err != nil {
+		return nil, err
+	}
+	s, ok := dbserver.Get(root, cfg, kind)
+	if !ok {
+		return nil, fmt.Errorf("%s is not installed; run `ebur install %s`", kind.Name(), kind)
+	}
+	return OpenServer(root, cfg, s)
+}
+
+// OpenServer opens a known server.
+func OpenServer(root paths.Root, cfg config.Settings, s dbserver.Server) (*Client, error) {
+	c := &Client{Server: s, Version: s.Version, password: cfg.DBRootPassword}
+	if s.Kind == dbserver.MySQL {
+		// MYSQL_PWD is deprecated in MySQL 8: its tools read the login
+		// from an option file instead.
+		cnf, err := provision.WriteClientCnf(root, s.Kind, s.Version, s.Port, cfg.DBRootPassword)
+		if err != nil {
+			return nil, err
+		}
+		c.cnf = cnf
+	}
+	return c, nil
 }
 
 var nameRe = regexp.MustCompile(`^[A-Za-z0-9_$-]{1,64}$`)
@@ -65,23 +90,32 @@ var system = map[string]bool{"mysql": true, "information_schema": true, "perform
 // IsSystem reports whether name is one of MariaDB's own databases.
 func IsSystem(name string) bool { return system[strings.ToLower(name)] }
 
-func (c *Client) command(ctx context.Context, tool string, args ...string) *exec.Cmd {
-	base := []string{"--host=127.0.0.1", fmt.Sprintf("--port=%d", c.port), "--user=root"}
-	cmd := exec.CommandContext(ctx, filepath.Join(c.bin, proc.Exe(tool)), append(base, args...)...)
-	cmd.Env = append(os.Environ(), "MYSQL_PWD="+c.password) // keeps it off the command line
+func (c *Client) command(ctx context.Context, tool dbserver.Tool, args ...string) *exec.Cmd {
+	var base []string
+	if c.cnf != "" {
+		base = []string{"--defaults-extra-file=" + filepath.ToSlash(c.cnf)} // must be the first option
+	} else {
+		base = []string{"--host=127.0.0.1", fmt.Sprintf("--port=%d", c.Server.Port), "--user=root"}
+	}
+	cmd := exec.CommandContext(ctx, c.Server.ToolPath(tool), append(base, args...)...)
+	cmd.Env = os.Environ()
+	if c.cnf == "" {
+		cmd.Env = append(cmd.Env, "MYSQL_PWD="+c.password) // keeps it off the command line
+	}
 	proc.Hide(cmd)
 	return cmd
 }
 
 // Exec runs SQL and returns its tab-separated output.
 func (c *Client) Exec(ctx context.Context, sql string) (string, error) {
-	cmd := c.command(ctx, "mariadb", "--batch", "--skip-column-names", "-e", sql)
+	cmd := c.command(ctx, dbserver.Client, "--batch", "--skip-column-names", "-e", sql)
 	var out, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &stderr
 	if err := cmd.Run(); err != nil {
 		return "", c.explain(stderr.String(), err)
 	}
-	return strings.TrimSpace(out.String()), nil
+	// MySQL's client ends lines with \r\n on Windows, MariaDB's with \n.
+	return strings.TrimSpace(strings.ReplaceAll(out.String(), "\r\n", "\n")), nil
 }
 
 // explain turns client output into an error, recognising "not running".
@@ -171,7 +205,7 @@ func (c *Client) Dump(ctx context.Context, name string, w io.Writer) error {
 	if !ValidName(name) || IsSystem(name) {
 		return fmt.Errorf("invalid database name %q", name)
 	}
-	cmd := c.command(ctx, "mariadb-dump", "--single-transaction", "--routines", "--triggers", "--events",
+	cmd := c.command(ctx, dbserver.Dump, "--single-transaction", "--routines", "--triggers", "--events",
 		"--hex-blob", "--default-character-set=utf8mb4", "--skip-dump-date", "--", name)
 	var stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = w, &stderr
@@ -186,7 +220,7 @@ func (c *Client) Load(ctx context.Context, name string, r io.Reader) error {
 	if !ValidName(name) || IsSystem(name) {
 		return fmt.Errorf("invalid database name %q", name)
 	}
-	cmd := c.command(ctx, "mariadb", "--default-character-set=utf8mb4", "--database="+name)
+	cmd := c.command(ctx, dbserver.Client, "--default-character-set=utf8mb4", "--database="+name)
 	var stderr bytes.Buffer
 	cmd.Stdin, cmd.Stderr = r, &stderr
 	if err := cmd.Run(); err != nil {
