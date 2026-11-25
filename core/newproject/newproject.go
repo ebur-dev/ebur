@@ -188,7 +188,8 @@ func Create(ctx context.Context, root paths.Root, o Options, say func(string), o
 	if err := fsutil.Rename(tmp, res.Dir); err != nil {
 		return fail(fmt.Errorf("move the finished project into www\\%s: %w", name, err))
 	}
-	res.Next = nextSteps(o.Kind, res)
+	nodes, _ := runtimes.Installed(root, "node")
+	res.Next = nextSteps(o.Kind, res, len(nodes) > 0)
 	return res, nil
 }
 
@@ -345,7 +346,11 @@ func blank(tmp string) error {
 	return os.WriteFile(filepath.Join(tmp, "index.php"), []byte(page), 0o644)
 }
 
-func nextSteps(k Kind, res Result) []string {
+func nextSteps(k Kind, res Result, haveNode bool) []string {
+	frontEnd := "Front end: `npm install` then `npm run dev` in Ebur's terminal."
+	if !haveNode {
+		frontEnd = "Front end: install Node with `ebur node install 24`, then `npm install` and `npm run dev` in Ebur's terminal."
+	}
 	var next []string
 	switch k {
 	case WordPress:
@@ -353,7 +358,7 @@ func nextSteps(k Kind, res Result) []string {
 	case Laravel:
 		next = append(next, "Open "+res.URL+". The database "+res.Database+" is set in .env and already migrated.",
 			"Run artisan inside the folder with `ebur exec php artisan …`, or open Ebur's terminal there.",
-			"Front end: `npm install` then `npm run dev` in Ebur's terminal (needs Node: `ebur node install 24`).")
+			frontEnd)
 	case Symfony:
 		next = append(next, "Open "+res.URL+". The database "+res.Database+" is set in .env.local.",
 			"Add packages with `ebur exec composer require …` inside the folder (e.g. webapp for a full web app).")

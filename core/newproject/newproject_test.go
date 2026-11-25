@@ -54,6 +54,19 @@ func TestBlank(t *testing.T) {
 	}
 }
 
+// The Node hint appears only when Node is missing.
+func TestNextStepsNodeHint(t *testing.T) {
+	res := Result{URL: "https://shop.test", Database: "shop", Dir: `C:\ebur\www\shop`}
+	with := strings.Join(nextSteps(Laravel, res, true), "\n")
+	without := strings.Join(nextSteps(Laravel, res, false), "\n")
+	if strings.Contains(with, "ebur node install") || !strings.Contains(with, "npm run dev") {
+		t.Errorf("with Node:\n%s", with)
+	}
+	if !strings.Contains(without, "ebur node install 24") {
+		t.Errorf("without Node:\n%s", without)
+	}
+}
+
 func TestRefusals(t *testing.T) {
 	root := testRoot(t, "php@8.4.1")
 	cases := []struct {
