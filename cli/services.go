@@ -145,6 +145,13 @@ func quitCmd() *cobra.Command {
 			} else if err != nil {
 				return err
 			}
+			// The host answers before it has finished shutting down; wait
+			// until it is gone so a following `ebur start` gets a new one.
+			for deadline := time.Now().Add(15 * time.Second); time.Now().Before(deadline); time.Sleep(100 * time.Millisecond) {
+				if errors.Is(call(root, "ping", nil, nil), ipc.ErrNotRunning) {
+					break
+				}
+			}
 			fmt.Println("Ebur stopped.")
 			return nil
 		},

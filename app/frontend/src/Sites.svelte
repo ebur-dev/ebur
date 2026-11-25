@@ -21,6 +21,7 @@
   <h2>Sites</h2>
   <span class="muted">Every folder in <code>www\</code> is served at <code>&lt;folder&gt;.{ov.tld}</code></span>
   <span class="spacer"></span>
+  <button onclick={() => run('', 'LinkProject')} title="Serve a project kept outside www\ without moving it">Add existing project…</button>
   <button onclick={() => run('', 'OpenWWW')}>Open www folder</button>
   <button onclick={() => run('', 'OpenTerminal')}>Open terminal</button>
 </div>
@@ -54,7 +55,14 @@
               {#if s.phpEol}<div class="problem" title="This PHP version gets no security fixes. Fine for maintaining an old project on this computer; plan to upgrade.">Legacy: end of life since {s.phpEol}</div>{/if}
             </td>
             <td><span class="dot {s.running ? 'running' : ''}"></span>{s.running ? 'Running' : 'Stopped'}</td>
-            <td class="mono muted path" title={s.docRoot}>{s.docRoot}</td>
+            <td class="mono muted path" title={s.target || s.docRoot}>
+              {#if s.target}
+                <span class="linked">linked from</span> {s.target}
+                <div><button class="link small" onclick={() => run('Unlinking ' + s.name + '…', 'UnlinkSite', s.name)} title="Stop serving this project. Its files are not touched.">Unlink</button></div>
+              {:else}
+                {s.docRoot}
+              {/if}
+            </td>
           </tr>
         {/each}
       </tbody>
@@ -85,5 +93,7 @@
   .src { font-size: 12px; color: var(--muted); margin-top: 3px; }
   .problem { font-size: 12px; color: var(--gold); margin-top: 3px; max-width: 260px; }
   .note { font-size: 13px; margin-top: 10px; }
+  .linked { font-family: var(--font-ui); color: var(--accent); }
+  .small { font-size: 12px; font-family: var(--font-ui); }
   select { font-size: 13px; padding: 3px 6px; }
 </style>

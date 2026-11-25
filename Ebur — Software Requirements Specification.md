@@ -138,6 +138,7 @@ The MVP needs 23 Must requirements across runtimes, services, sites and the two 
 | SITE-03 | The system shall detect a site's document root (`public\`, `web\` or the folder itself). | Must | MVP |
 | SITE-04 | The user shall be able to change the TLD (default `.test`) and add custom domains per site. Needs a design for the elevated helper, which only accepts `.test` and `.localhost` so it cannot be used to redirect real sites; and the local CA is name-constrained to the TLD, so a TLD change means a new CA. | Should | v1 |
 | SITE-05 | The system shall watch `www\` and apply new or removed sites without a restart. Implemented Nov 25, 2026: also reacts to a new `public\` folder and to `.ebur` and `composer.json` changes; Nginx reloads gracefully, only affected PHP pools start or stop (each version keeps a fixed port block), unused pools retire after a grace period, and MariaDB is never restarted. | Should | v1 |
+| SITE-06 | A project kept outside `www\` shall be servable without moving it. Implemented Nov 25, 2026: `ebur link [folder] [--name]` and the window's *Add existing project* make a directory junction in `www\`; `ebur unlink` (or *Unlink*) removes only the junction and refuses real folders; links to network shares, into `www\` or around the Ebur folder are refused; a missing target is reported, not served; `.ebur`, `composer.json`, `ebur exec` and the terminal work from the project's real folder. | Should | v1 |
 
 ### 3.5 Local HTTPS (SSL)
 
@@ -228,6 +229,7 @@ ebur start | stop | restart [service]
 ebur php [version]            # show or set global PHP
 ebur php install 8.3
 ebur sites                    # list sites, URLs, versions
+ebur link D:\code\shop        # serve a folder outside www\
 ebur new shop --laravel
 ebur share shop               # public tunnel URL
 ebur db snapshot shop

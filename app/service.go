@@ -129,7 +129,29 @@ type SiteRow struct {
 	PHPWant    string `json:"phpWant"`
 	PHPProblem string `json:"phpProblem"`
 	PHPEOL     string `json:"phpEol"` // set when the version is past end of life
+	Target     string `json:"target"` // linked project's real folder (`ebur link`)
 	Running    bool   `json:"running"`
+}
+
+// LinkProject asks for a folder and serves it as a site (like `ebur link`).
+// It returns the new site's name, or "" if the user cancelled.
+func (a *App) LinkProject() (string, error) {
+	dir, err := a.app.Dialog.OpenFile().
+		SetTitle("Choose a project folder to serve with Ebur").
+		CanChooseDirectories(true).
+		CanChooseFiles(false).
+		SetButtonText("Serve this folder").
+		PromptForSingleSelection()
+	if err != nil || dir == "" {
+		return "", nil // cancelled
+	}
+	name, err := sites.Link(a.root.Dir(), a.root.WWW(), dir, "")
+	return name, a.after(err)
+}
+
+// UnlinkSite stops serving a linked project; its files are not touched.
+func (a *App) UnlinkSite(name string) error {
+	return a.after(sites.Unlink(a.root.WWW(), name))
 }
 
 func (a *App) Overview() (Overview, error) {
@@ -175,7 +197,7 @@ func (a *App) Overview() (Overview, error) {
 		row := SiteRow{
 			Name: s.Name, URL: scheme + "://" + s.Host, DocRoot: s.DocRoot,
 			PHP: c.Version, PHPSource: c.Source, PHPWant: c.Want, PHPProblem: c.Problem,
-			Running: nginxUp,
+			Target: s.Target, Running: nginxUp,
 		}
 		if sup := install.SupportOf("php", c.Version); sup.Ended {
 			row.PHPEOL = sup.EOL

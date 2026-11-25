@@ -345,7 +345,7 @@ func sitesCmd() *cobra.Command {
 				scheme = "https"
 			}
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "URL\tPHP\tCHOSEN BY\tSTATUS\tDOCUMENT ROOT")
+			fmt.Fprintln(w, "URL\tPHP\tCHOSEN BY\tSTATUS\tFOLDER")
 			for _, s := range found {
 				status := "stopped"
 				if running {
@@ -359,7 +359,11 @@ func sitesCmd() *cobra.Command {
 				if install.SupportOf("php", php).Ended {
 					php += " (EOL)" // legacy: no security fixes
 				}
-				fmt.Fprintf(w, "%s://%s\t%s\t%s\t%s\t%s\n", scheme, s.Host, php, by, status, s.DocRoot)
+				where := s.DocRoot
+				if s.Target != "" {
+					where = "linked: " + s.Target // `ebur link`
+				}
+				fmt.Fprintf(w, "%s://%s\t%s\t%s\t%s\t%s\n", scheme, s.Host, php, by, status, where)
 			}
 			w.Flush()
 			for _, s := range found {

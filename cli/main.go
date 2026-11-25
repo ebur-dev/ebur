@@ -32,7 +32,7 @@ func main() {
 	root.AddCommand(
 		statusCmd(), startCmd(), stopCmd(), restartCmd(), quitCmd(),
 		phpCmd(), installCmd(), sitesCmd(), dbCmd(), mailCmd(), sslCmd(), doctorCmd(),
-		terminalCmd(), execCmd(), hostsCmd(), setupCmd(), daemonCmd(),
+		terminalCmd(), execCmd(), hostsCmd(), setupCmd(), linkCmd(), unlinkCmd(), daemonCmd(),
 	)
 	if err := root.Execute(); err != nil {
 		printError(err)

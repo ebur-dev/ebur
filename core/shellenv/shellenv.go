@@ -12,6 +12,7 @@ import (
 	"github.com/ebur-dev/ebur/core/paths"
 	"github.com/ebur-dev/ebur/core/project"
 	"github.com/ebur-dev/ebur/core/runtimes"
+	"github.com/ebur-dev/ebur/core/sites"
 )
 
 // Env is what a console needs on top of the user's own environment.
@@ -32,30 +33,21 @@ func active(root paths.Root, cfg config.Settings, rt string) string {
 	return ""
 }
 
-// siteDir returns www\<site> when dir is inside a site, else "".
-func siteDir(root paths.Root, dir string) string {
-	if dir == "" {
-		return ""
-	}
-	rel, err := filepath.Rel(root.WWW(), dir)
-	if err != nil || rel == "." || strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
-		return ""
-	}
-	first := strings.SplitN(filepath.ToSlash(rel), "/", 2)[0]
-	return filepath.Join(root.WWW(), first)
-}
-
 // For returns the environment for root's runtimes. When dir is inside a
-// site, PHP is that site's version (PHP-04), so `ebur exec composer` and
+// site, or inside a linked project's real folder (`ebur link`), PHP is
+// that site's version (PHP-04), so `ebur exec composer` and
 // `php artisan` match what serves the site.
 func For(root paths.Root, dir string) Env {
 	cfg, _ := config.Load(root.Config())
 	env := Env{Vars: map[string]string{paths.EnvRoot: root.Dir()}}
 	v := active(root, cfg, "php")
-	if sd := siteDir(root, dir); sd != "" && v != "" {
-		installed, _ := runtimes.Installed(root, "php")
-		c := project.Resolve(sd, installed, v)
-		v, env.PHPSource = c.Version, filepath.Base(sd)+" ("+c.Source+")"
+	if dir != "" && v != "" {
+		found, _, _ := sites.Scan(root.WWW(), cfg.TLD)
+		if s, ok := sites.ForPath(found, dir); ok {
+			installed, _ := runtimes.Installed(root, "php")
+			c := project.Resolve(s.Dir, installed, v)
+			v, env.PHPSource = c.Version, s.Name+" ("+c.Source+")"
+		}
 	}
 	env.PHP = v
 	if v != "" {

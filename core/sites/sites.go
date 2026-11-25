@@ -3,6 +3,7 @@ package sites
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -22,6 +23,9 @@ type Site struct {
 	// PHP is the version serving this site and why (PHP-04). Scan leaves
 	// it empty; the stack fills it in with project.Resolve.
 	PHP project.Choice `json:"php"`
+	// Target is set for a linked site (`ebur link`): the project's real
+	// folder outside www\, which Dir points to through a junction.
+	Target string `json:"target,omitempty"`
 }
 
 // A folder name must be a valid DNS label to become a host name.
@@ -44,16 +48,29 @@ func Scan(www, tld string) (sites []Site, skipped []Skipped, err error) {
 		return nil, nil, err
 	}
 	for _, e := range entries {
-		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+		if strings.HasPrefix(e.Name(), ".") {
 			continue
+		}
+		dir := filepath.Join(www, e.Name())
+		target := ""
+		if !e.IsDir() {
+			// A junction or symlink (`ebur link`) is listed as irregular or a
+			// link, not as a folder: follow it.
+			if e.Type()&(fs.ModeSymlink|fs.ModeIrregular) == 0 {
+				continue
+			}
+			target, _ = os.Readlink(dir)
+			if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+				skipped = append(skipped, Skipped{e.Name(), fmt.Sprintf("linked project folder %s is missing; run `ebur unlink %s` or restore the folder", target, e.Name())})
+				continue
+			}
 		}
 		name := strings.ToLower(e.Name())
 		if !labelRe.MatchString(name) {
 			skipped = append(skipped, Skipped{e.Name(), "folder name is not a valid host name: use letters, digits and dashes"})
 			continue
 		}
-		dir := filepath.Join(www, e.Name())
-		sites = append(sites, Site{Name: name, Host: name + "." + tld, Dir: dir, DocRoot: DocRoot(dir)})
+		sites = append(sites, Site{Name: name, Host: name + "." + tld, Dir: dir, DocRoot: DocRoot(dir), Target: target})
 	}
 	sort.Slice(sites, func(i, j int) bool { return sites[i].Name < sites[j].Name })
 	return sites, skipped, nil

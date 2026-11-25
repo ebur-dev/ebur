@@ -8,6 +8,7 @@ import (
 
 	"github.com/ebur-dev/ebur/core/config"
 	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/sites"
 )
 
 func TestFor(t *testing.T) {
@@ -58,6 +59,22 @@ func TestForUsesTheSitesPHP(t *testing.T) {
 		if e := For(root, d); e.PHP != "8.5.13" {
 			t.Errorf("%s: PHP %s, want the default", d, e.PHP)
 		}
+	}
+}
+
+// A linked project's real folder gets the site's PHP too (`ebur link`).
+func TestForLinkedProject(t *testing.T) {
+	root, _ := paths.New(t.TempDir())
+	os.MkdirAll(root.RuntimeDir("php", "8.5.13"), 0o755)
+	os.MkdirAll(root.RuntimeDir("php", "8.3.37"), 0o755)
+	project := filepath.Join(t.TempDir(), "client-site")
+	os.MkdirAll(filepath.Join(project, "src"), 0o755)
+	os.WriteFile(filepath.Join(project, ".ebur"), []byte("php: 8.3\n"), 0o644)
+	if _, err := sites.Link(root.Dir(), root.WWW(), project, ""); err != nil {
+		t.Fatal(err)
+	}
+	if e := For(root, filepath.Join(project, "src")); e.PHP != "8.3.37" || !strings.Contains(e.PHPSource, "client-site") {
+		t.Fatalf("in the real project folder: %+v", e)
 	}
 }
 
