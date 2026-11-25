@@ -20,6 +20,18 @@
       sslError = errorText(e)
     }
   }
+  // SVC-06: start services when Ebur opens; open Ebur at Windows sign-in.
+  let start = $state(null)
+  let startError = $state('')
+  async function setStartup(method, on) {
+    startError = ''
+    try {
+      start = await call(method, on)
+    } catch (e) {
+      startError = errorText(e)
+      start = await call('StartupSettings')
+    }
+  }
   let db = $state(null)
   let ssl = $state(null)
   let reveal = $state(false)
@@ -120,6 +132,7 @@
     redis = await call('Redis')
     hosts = await call('Hosts')
     appearance = await call('Appearance')
+    start = await call('StartupSettings')
     tld = await call('SiteAddresses')
     db = await call('Database')
     ssl = await call('SSL')
@@ -184,6 +197,24 @@
       {/each}
     </div>
     <p class="muted note">System follows the Windows light or dark setting.</p>
+  </section>
+
+  <section class="card">
+    <h3>Startup</h3>
+    {#if !start}
+      <p class="muted">Loading…</p>
+    {:else}
+      <label class="toggle">
+        <input type="checkbox" checked={start.startServices} onchange={(e) => setStartup('SetStartServices', e.currentTarget.checked)}>
+        <span>Start services when Ebur opens</span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" checked={start.openAtSignIn} onchange={(e) => setStartup('SetOpenAtSignIn', e.currentTarget.checked)}>
+        <span>Open Ebur when I sign in to Windows</span>
+      </label>
+      <p class="muted note">With both on, your sites are ready after every restart. Ebur opens in the tray, without its window.</p>
+      {#if startError}<pre class="err">{startError}</pre>{/if}
+    {/if}
   </section>
 
   <section class="card">
@@ -441,6 +472,8 @@
   .segmented button + button { border-left: 1px solid var(--border); }
   .segmented button.on { background: var(--accent); color: var(--accent-text); font-weight: 600; }
   .note { margin: 10px 0 0; font-size: 13px; }
+  .toggle { display: flex; align-items: center; gap: 10px; padding: 4px 0; cursor: pointer; }
+  .toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
   .small { font-size: 12px; }
   .pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .servers { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }

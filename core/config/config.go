@@ -20,8 +20,13 @@ type Settings struct {
 	Active map[string]string `json:"active"`
 	// WebServer is "nginx" (MVP) or "apache" (v1, SVC-02).
 	WebServer string `json:"web_server"`
-	// AutoStart lists services started when Ebur launches (SVC-06).
+	// AutoStart lists services started when Ebur launches (SVC-06). Empty
+	// means all of them, unless StartServices is false.
 	AutoStart []string `json:"auto_start,omitempty"`
+	// StartServices says whether opening the tray app starts services
+	// (SVC-06). Missing means yes, so installs from before this setting
+	// existed get it too; see StartsServices.
+	StartServices *bool `json:"start_services,omitempty"`
 	// PHPPoolSize is the number of php-cgi workers per PHP version.
 	PHPPoolSize int `json:"php_pool_size"`
 	// TLD is the site domain suffix without the dot (SITE-04).
@@ -52,6 +57,10 @@ type Settings struct {
 	// "mariadb" or "mysql". Empty means MariaDB if installed.
 	DefaultDB string `json:"default_db,omitempty"`
 }
+
+// StartsServices reports whether opening Ebur starts its services: on
+// unless the user turned it off.
+func (s Settings) StartsServices() bool { return s.StartServices == nil || *s.StartServices }
 
 // SelfResolving reports whether names under tld reach this computer
 // without the hosts file: browsers send every *.localhost name to

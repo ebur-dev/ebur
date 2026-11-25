@@ -56,7 +56,8 @@ builds, checks every download's SHA-256, and keeps everything in one folder.
 - **Composer** included; a terminal with PHP, Composer, Node and the
   database clients on `PATH`, without changing the system `PATH`.
 - **Tray app and window** (Sites, Services, Logs, Health, Settings), light or
-  dark, and a first-run wizard.
+  dark, and a first-run wizard. Opening Ebur starts its services, and it can
+  open at Windows sign-in, so sites are ready after a restart.
 - **Full command line**: everything the window does, `ebur` does too.
 - **`ebur doctor`** checks ports, runtimes, configs and the hosts file, and
   says how to fix what it finds.
@@ -99,6 +100,7 @@ ebur db default mysql       new projects use MySQL (or: ebur new shop --laravel 
 ebur ssl install            local HTTPS (ssl uninstall removes it)
 ebur hosts sync             map site names to 127.0.0.1
 ebur tld localhost          sites at <name>.localhost: no hosts file needed (for locked-down PCs)
+ebur startup signin on      open Ebur at Windows sign-in (ebur startup services off: don't start services on open)
 ebur exec composer install  run a command with Ebur's PHP and Composer
 ebur terminal               open a console with Ebur's tools on PATH
 ebur doctor                 find and explain problems

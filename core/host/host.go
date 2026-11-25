@@ -148,7 +148,10 @@ func (h *Host) Run(ctx context.Context) error {
 	go h.watch(watchCtx)          // SITE-05
 	go h.refreshCatalog(watchCtx) // SEC-02: newer signed runtime list
 
-	if cfg, err := config.Load(h.Root.Config()); err == nil && len(cfg.AutoStart) > 0 { // SVC-06
+	// SVC-06: an explicit auto_start list starts here, for the tray app and
+	// `ebur daemon` alike. Starting everything by default is the tray app's
+	// job (app/startup.go), so a CLI command never starts services by itself.
+	if cfg, err := config.Load(h.Root.Config()); err == nil && cfg.StartsServices() && len(cfg.AutoStart) > 0 {
 		if _, err := h.Start(Selection{Services: cfg.AutoStart}); err != nil {
 			log.Printf("auto-start: %v", err)
 		}

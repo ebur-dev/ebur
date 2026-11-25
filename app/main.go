@@ -132,6 +132,7 @@ func main() {
 	svc.changed = t.refresh
 	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
 		go t.run()
+		go svc.startOnLaunch() // SVC-06
 		if len(os.Args) < 2 || os.Args[1] != "--background" {
 			openWindow()
 		}

@@ -49,7 +49,15 @@ VersionInfoProductTextVersion={#AppVersion}
 VersionInfoDescription=Ebur setup
 
 [Tasks]
+Name: "startatsignin"; Description: "Open Ebur when I sign in to Windows, so sites are ready after a restart"
 Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
+
+[Registry]
+; SVC-06. The same entry as Settings > Startup and `ebur startup signin`
+; (core/startup): the tray app, without its window. Uninstalling always
+; removes it, however it was turned on.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Ebur"; ValueData: """{app}\ebur-app.exe"" --background"; Tasks: startatsignin
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "Ebur"; Flags: uninsdeletevalue
 
 [Files]
 Source: "{#StageDir}\ebur.exe"; DestDir: "{app}"; Flags: ignoreversion

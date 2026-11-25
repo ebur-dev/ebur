@@ -101,3 +101,22 @@ func TestInvalid(t *testing.T) {
 		t.Errorf("mysql_port equal to db_port rejected: %v", err)
 	}
 }
+
+// Installs from before start_services existed have no such key: they must
+// start services on launch, and an explicit "off" must survive a save.
+func TestStartServicesDefaultsOn(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "ebur.json")
+	os.WriteFile(p, []byte(`{"setup_done": true, "tld": "localhost"}`), 0o644)
+	s, err := Load(p)
+	if err != nil || !s.StartsServices() {
+		t.Fatalf("old config: starts=%v err=%v", s.StartsServices(), err)
+	}
+	off := false
+	s.StartServices = &off
+	if err := Save(p, s); err != nil {
+		t.Fatal(err)
+	}
+	if s, _ = Load(p); s.StartsServices() {
+		t.Fatal("turning it off did not stick")
+	}
+}
