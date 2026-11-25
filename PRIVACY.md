@@ -17,17 +17,28 @@ does not read or upload your source code, databases or files.
 
 ## What Ebur downloads
 
-Ebur makes outgoing connections only to fetch software and to check for
-updates. It sends no information about you or your computer in them. As with
-any web request, the server you connect to can see your IP address and the
-file you asked for.
+Ebur makes outgoing connections only to fetch software, to check for updates
+to its runtime list, and to create projects you ask for. It sends no
+information about you or your computer in them. As with any web request, the
+server you connect to can see your IP address and the file you asked for.
 
 - **Runtimes** (PHP, Nginx, MariaDB, MySQL, Node.js, Composer, Redis, Mailpit
   and similar) are downloaded from the official upstream hosts listed in the
-  signed runtime manifest. Ebur checks each file's SHA-256 before using it.
+  runtime manifest. Ebur checks each file's SHA-256 before using it.
 - **The runtime manifest** is a public file fetched about once a day from this
   project's GitHub Releases, and its Ed25519 signature is verified. Ebur does
-  not report which versions you have installed.
+  not report which versions you have installed. To turn this check off, set
+  `"manifest_url": "off"` in `ebur.json`; Ebur then keeps using the list built
+  into it.
+- **New projects**, only when you create one: `ebur new --laravel` and
+  `--symfony` run Composer, which downloads the framework from Packagist and
+  GitHub; `--wordpress` downloads WordPress from wordpress.org and checks the
+  latest version with its API.
+- **Bundled tools don't phone home.** Ebur turns off the update checks built
+  into the tools it runs: Mailpit's version check, Adminer's (which would
+  otherwise make your browser contact adminer.org whenever you open the
+  database page) and cloudflared's auto-update. Ebur updates these tools
+  itself, through the runtime manifest.
 - **Share links** are optional and start only when you ask for one. Ebur then
   runs `cloudflared`, which makes a temporary public address (`*.trycloudflare.com`)
   for the site you chose. Visitors to that address, and Cloudflare, can see the

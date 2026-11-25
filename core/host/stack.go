@@ -274,7 +274,11 @@ func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 		return Stack{}, err
 	}
 	if adminerVer != "" { // TOOL-01: Adminer is served like any other site
-		tool := sites.Site{Name: "db", Host: "db." + cfg.TLD, DocRoot: root.RuntimeDir("adminer", adminerVer)}
+		docRoot, err := writeAdminer(root, adminerVer) // with its update check off
+		if err != nil {
+			return Stack{}, err
+		}
+		tool := sites.Site{Name: "db", Host: "db." + cfg.TLD, DocRoot: docRoot}
 		served = append(append([]sites.Site(nil), found...), tool)
 		info.Adminer = "http://" + tool.Host
 	}

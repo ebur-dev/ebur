@@ -304,7 +304,7 @@ Ebur's selling point is being light: under 20 MB to download, under 60 MB of RAM
 | NFR-14 | Usability | Every error message names the cause and a next step | Reviewed per release |
 | NFR-15 | Maintainability | Core package unit test coverage | ≥ 70% |
 | NFR-16 | Licensing | Ebur code MIT; bundled tools keep their licences, listed in `THIRD_PARTY.md` | Checked per release |
-| NFR-17 | Privacy | No telemetry by default; any future telemetry is opt-in | Default off |
+| NFR-17 | Privacy | No telemetry by default; any future telemetry is opt-in. Bundled tools' own update checks are turned off too (Mailpit `--disable-version-check`, cloudflared `--no-autoupdate`, Adminer served through a wrapper whose `verifyVersion()` returns false); see `PRIVACY.md`. | Default off |
 
 ## 6. Architecture and data layout
 
