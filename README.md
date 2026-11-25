@@ -119,6 +119,30 @@ The requirements, decisions and known risks are in the
 [Software Requirements Specification](Ebur%20%E2%80%94%20Software%20Requirements%20Specification.md).
 Requirement IDs such as `SITE-02` appear in code comments, issues and commits.
 
+## Releases and download counts
+
+Pushing a version tag publishes a release: GitHub Actions runs the tests,
+builds the installer and portable zip with that version, and attaches them
+with a `SHA256SUMS.txt` (`.github/workflows/release.yml`).
+
+```
+git tag v0.1.0
+git push origin v0.1.0          # a tag like v0.2.0-beta.1 becomes a pre-release
+```
+
+Ebur sends no telemetry (NFR-17). GitHub counts how often each release file
+is downloaded:
+
+```
+gh api repos/ebur-dev/ebur/releases --jq ".[] | {tag: .tag_name, downloads: [.assets[] | {(.name): .download_count}]}"
+```
+
+Without the GitHub CLI (PowerShell; works once the repository is public):
+
+```
+(Invoke-RestMethod https://api.github.com/repos/ebur-dev/ebur/releases) | ForEach-Object { $_.tag_name; $_.assets | Format-Table name, download_count }
+```
+
 ## Contributing
 
 Issues and pull requests are welcome. Please reference the requirement ID
