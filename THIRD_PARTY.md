@@ -19,6 +19,8 @@ per release.
 | github.com/inconshreveable/mousetrap | 1.1.0 | Apache-2.0 |
 | golang.org/x/sys | 0.50.0 | BSD-3-Clause |
 | Svelte (window user interface) | 5.57.3 | MIT |
+| Inter (UI font, via @fontsource-variable/inter) | 5.3.0 | OFL-1.1 (`licenses\Inter-OFL.txt`) |
+| JetBrains Mono (code font, via @fontsource-variable/jetbrains-mono) | 5.3.0 | OFL-1.1 (`licenses\JetBrainsMono-OFL.txt`) |
 
 `ebur-helper.exe`, the only program that runs as administrator, contains only
 the Go standard library, `golang.org/x/sys` and Ebur's own hosts-file code.

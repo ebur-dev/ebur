@@ -37,6 +37,10 @@ go build -trimpath -ldflags "$ld -H windowsgui" -o "$stage\ebur-app.exe" ./app; 
 go build -trimpath -ldflags "-s -w" -o "$stage\ebur-helper.exe" ./helper; Check 'build ebur-helper.exe'
 Copy-Item THIRD_PARTY.md, build\ebur.ico $stage
 Copy-Item LICENSE "$stage\LICENSE.txt"   # .txt so Windows users can open it
+# The window embeds Inter and JetBrains Mono; the OFL asks for its text to ship with them.
+New-Item -ItemType Directory "$stage\licenses" | Out-Null
+Copy-Item app\frontend\node_modules\@fontsource-variable\inter\LICENSE "$stage\licenses\Inter-OFL.txt"
+Copy-Item app\frontend\node_modules\@fontsource-variable\jetbrains-mono\LICENSE "$stage\licenses\JetBrainsMono-OFL.txt"
 
 Step "Portable zip"
 $zip = Join-Path $dist "ebur-$Version-windows-x64.zip"

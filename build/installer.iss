@@ -58,6 +58,7 @@ Source: "{#StageDir}\ebur-helper.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StageDir}\ebur.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StageDir}\THIRD_PARTY.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StageDir}\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#StageDir}\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\Ebur"; Filename: "{app}\ebur-app.exe"; IconFilename: "{app}\ebur.ico"; Comment: "Local PHP development environment"

@@ -16,8 +16,8 @@
   --accent: var(--gold);
   --accent-text: #2b2f33;
 
-  --font-ui: Inter, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", Consolas, ui-monospace, monospace;
+  --font-ui: "Inter Variable", Inter, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", Consolas, ui-monospace, monospace;
   color-scheme: light;
 }
 
@@ -80,7 +80,8 @@ select {
   color: var(--text);
 }
 
-code, pre, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+/* Ligatures off: in paths and logs "->" or "!=" must look as typed. */
+code, pre, .mono { font-family: var(--font-mono); font-size: 12.5px; font-variant-ligatures: none; }
 
 table { width: 100%; border-collapse: collapse; }
 th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
