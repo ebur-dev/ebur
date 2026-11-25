@@ -45,6 +45,12 @@ func within(path, dir string) bool {
 	return len(p) > len(d) && samePath(p[:len(d)+1], strings.TrimSuffix(d, sep)+sep)
 }
 
+// Reserved maps folder names under www\ that Ebur serves itself to the tool.
+var Reserved = map[string]string{"db": "Adminer", "mail": "Mailpit"}
+
+// ValidName reports whether name can be a site name (one DNS label).
+func ValidName(name string) bool { return labelRe.MatchString(name) }
+
 // Link serves the project folder target as <name>.<tld>. An empty name
 // is derived from the folder name. It returns the site name used.
 func Link(root, www, target, name string) (string, error) {

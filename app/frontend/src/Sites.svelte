@@ -1,5 +1,8 @@
 <script>
+  import NewProject from './NewProject.svelte'
+
   let { ov, run } = $props()
+  let creating = $state(false)
 
   const sourceText = { default: 'default', '.ebur': '.ebur file', 'composer.json': 'composer.json' }
 
@@ -21,6 +24,7 @@
   <h2>Sites</h2>
   <span class="muted">Every folder in <code>www\</code> is served at <code>&lt;folder&gt;.{ov.tld}</code></span>
   <span class="spacer"></span>
+  <button class="primary" onclick={() => (creating = true)}>New project…</button>
   <button onclick={() => run('', 'LinkProject')} title="Serve a project kept outside www\ without moving it">Add existing project…</button>
   <button onclick={() => run('', 'OpenWWW')}>Open www folder</button>
   <button onclick={() => run('', 'OpenTerminal')}>Open terminal</button>
@@ -29,8 +33,9 @@
 {#if ov.sites.length === 0}
   <div class="card empty">
     <p><strong>No sites yet.</strong></p>
-    <p class="muted">Create a folder in <code>{ov.root}\www</code>, for example <code>shop</code>, and it is served at <code>http://shop.{ov.tld}</code>. Laravel and Symfony <code>public\</code> folders are detected automatically.</p>
-    <button class="primary" onclick={() => run('', 'OpenWWW')}>Open www folder</button>
+    <p class="muted">Create a Laravel, WordPress or Symfony project with <strong>New project…</strong>, or create a folder in <code>{ov.root}\www</code>, for example <code>shop</code>, and it is served at <code>http://shop.{ov.tld}</code>. Laravel and Symfony <code>public\</code> folders are detected automatically.</p>
+    <button class="primary" onclick={() => (creating = true)}>New project…</button>
+    <button onclick={() => run('', 'OpenWWW')}>Open www folder</button>
   </div>
 {:else}
   <div class="card flush">
@@ -77,6 +82,8 @@
 {#if ov.mail}
   <p class="muted">Mail: everything your sites send is caught at <button class="link" onclick={() => run('', 'OpenURL', (ov.https ? 'https' : 'http') + '://mail.' + ov.tld)}>mail.{ov.tld}</button>, never delivered.</p>
 {/if}
+
+{#if creating}<NewProject {ov} onclose={() => (creating = false)} />{/if}
 
 {#each ov.skipped as s}
   <p class="warn">Skipped <code>www\{s.folder}</code>: {s.reason}</p>

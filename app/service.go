@@ -24,6 +24,7 @@ import (
 	"github.com/ebur-dev/ebur/core/hostsfile"
 	"github.com/ebur-dev/ebur/core/hostsync"
 	"github.com/ebur-dev/ebur/core/install"
+	"github.com/ebur-dev/ebur/core/newproject"
 	"github.com/ebur-dev/ebur/core/paths"
 	"github.com/ebur-dev/ebur/core/project"
 	"github.com/ebur-dev/ebur/core/provision"
@@ -47,6 +48,10 @@ type App struct {
 
 	setupMu      sync.Mutex
 	setupRunning bool
+
+	projectMu      sync.Mutex
+	projectRunning bool
+	projectCancel  context.CancelFunc
 
 	hostsMu   sync.Mutex
 	lastSites string // site names last seen, to notice new ones (SITE-05)
@@ -111,6 +116,7 @@ type Overview struct {
 	HTTPS        bool            `json:"https"`
 	Adminer      bool            `json:"adminer"`
 	Mail         bool            `json:"mail"` // Mailpit installed (TOOL-03)
+	DBInstalled  bool            `json:"dbInstalled"`
 	TLD          string          `json:"tld"`
 	Root         string          `json:"root"`
 	Version      string          `json:"version"`
@@ -149,6 +155,86 @@ func (a *App) LinkProject() (string, error) {
 	return name, a.after(err)
 }
 
+// ProjectProgress is one "project:progress" event: the current step and
+// the latest line of tool output (Composer).
+type ProjectProgress struct {
+	Step   string `json:"step"`
+	Detail string `json:"detail"`
+}
+
+// ProjectFinished is the "project:finished" event.
+type ProjectFinished struct {
+	OK     bool              `json:"ok"`
+	Error  string            `json:"error"`
+	Result newproject.Result `json:"result"`
+}
+
+// CreateProject starts creating a site from a starter (PROJ-01/02) in the
+// background, like `ebur new`. kind is laravel, wordpress, symfony or blank.
+func (a *App) CreateProject(name, kind, php string) error {
+	a.projectMu.Lock()
+	if a.projectRunning {
+		a.projectMu.Unlock()
+		return errors.New("a project is already being created; wait for it to finish")
+	}
+	a.projectRunning = true
+	ctx, cancel := context.WithCancel(context.Background())
+	a.projectCancel = cancel
+	a.projectMu.Unlock()
+
+	go func() {
+		defer func() {
+			cancel()
+			a.projectMu.Lock()
+			a.projectRunning, a.projectCancel = false, nil
+			a.projectMu.Unlock()
+		}()
+		var mu sync.Mutex
+		p := ProjectProgress{}
+		emit := func() { a.app.Event.Emit("project:progress", p) }
+		say := func(step string) { mu.Lock(); p = ProjectProgress{Step: step}; emit(); mu.Unlock() }
+		out := lineWriter(func(line string) { mu.Lock(); p.Detail = line; emit(); mu.Unlock() })
+
+		k := newproject.Kind(kind)
+		if k != newproject.Blank {
+			say("Starting services")
+			var st host.Status
+			a.b.call("start", host.Selection{}, &st) // the database must run; Create explains if it does not
+		}
+		res, err := newproject.Create(ctx, a.root, newproject.Options{Name: name, Kind: k, PHP: php}, say, out)
+		fin := ProjectFinished{OK: err == nil, Result: res}
+		if err != nil {
+			fin.Error = err.Error()
+		}
+		a.app.Event.Emit("project:finished", fin)
+		if a.changed != nil {
+			a.changed()
+		}
+	}()
+	return nil
+}
+
+// CancelProject stops a project being created; nothing is kept.
+func (a *App) CancelProject() {
+	a.projectMu.Lock()
+	defer a.projectMu.Unlock()
+	if a.projectCancel != nil {
+		a.projectCancel()
+	}
+}
+
+// lineWriter calls fn with each non-empty output line.
+type lineWriter func(string)
+
+func (w lineWriter) Write(b []byte) (int, error) {
+	for _, l := range strings.FieldsFunc(string(b), func(r rune) bool { return r == '\n' || r == '\r' }) {
+		if l = strings.TrimSpace(l); l != "" {
+			w(l)
+		}
+	}
+	return len(b), nil
+}
+
 // UnlinkSite stops serving a linked project; its files are not touched.
 func (a *App) UnlinkSite(name string) error {
 	return a.after(sites.Unlink(a.root.WWW(), name))
@@ -177,6 +263,8 @@ func (a *App) Overview() (Overview, error) {
 	ov.Adminer = len(adminer) > 0
 	mail, _ := runtimes.Installed(a.root, "mailpit")
 	ov.Mail = len(mail) > 0
+	db, _ := runtimes.Installed(a.root, "mariadb")
+	ov.DBInstalled = len(db) > 0
 	scheme := "http"
 	if ov.HTTPS {
 		scheme = "https"

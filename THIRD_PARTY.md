@@ -39,3 +39,14 @@ you install them, checks each download's SHA-256, and keeps them in `bin\`.
 | CA certificate bundle (Mozilla roots, via curl) | curl.se | MPL-2.0 |
 
 Run `ebur doctor` or open the window's Health tab to see which are installed.
+
+## Project starters
+
+`ebur new` and the window's *New project…* fetch these into your new project
+folder; they become part of your project, under their own licences.
+
+| Starter | Source | Licence |
+| --- | --- | --- |
+| WordPress (latest release, SHA-1 checked against wordpress.org) | wordpress.org | GPL-2.0-or-later |
+| Laravel (`laravel/laravel` and its packages, via Composer) | packagist.org | MIT (Laravel) |
+| Symfony (`symfony/skeleton` and its packages, via Composer) | packagist.org | MIT (Symfony) |

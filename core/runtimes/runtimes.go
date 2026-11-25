@@ -138,6 +138,9 @@ func (p *progressReader) Read(b []byte) (int, error) {
 	return n, err
 }
 
+// Extract is extract for other packages (e.g. WordPress for `ebur new`).
+func Extract(zipPath, dest, root string) error { return extract(zipPath, dest, root) }
+
 // extract unpacks zipPath into dest. When root is set, only entries under
 // that folder are extracted, with the folder stripped. Entries that would
 // land outside dest (zip slip) fail the whole extraction.

@@ -49,6 +49,21 @@ func For(root paths.Root, dir string) Env {
 			v, env.PHPSource = c.Version, s.Name+" ("+c.Source+")"
 		}
 	}
+	return build(root, cfg, env, v)
+}
+
+// ForPHP is For with an explicit PHP version ("" means the default),
+// used when no site exists yet, e.g. while `ebur new` runs Composer.
+func ForPHP(root paths.Root, version string) Env {
+	cfg, _ := config.Load(root.Config())
+	env := Env{Vars: map[string]string{paths.EnvRoot: root.Dir()}}
+	if version == "" {
+		version = active(root, cfg, "php")
+	}
+	return build(root, cfg, env, version)
+}
+
+func build(root paths.Root, cfg config.Settings, env Env, v string) Env {
 	env.PHP = v
 	if v != "" {
 		env.Path = append(env.Path, root.RuntimeDir("php", v))

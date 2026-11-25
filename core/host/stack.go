@@ -82,8 +82,7 @@ func optional(root paths.Root, cfg config.Settings, runtime string) (string, err
 	return activeOrNewest(root, cfg, runtime)
 }
 
-// reserved folder names under www\ that Ebur serves itself.
-var reserved = map[string]string{"db": "Adminer", "mail": "Mailpit"}
+var reserved = sites.Reserved
 
 // mailpitSpec runs Mailpit on loopback only. Its own defaults listen on
 // all interfaces ([::]), which would expose captured mail to the network
