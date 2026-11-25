@@ -126,7 +126,7 @@ The MVP needs 23 Must requirements across runtimes, services, sites and the two 
 | SVC-02 | The system shall let the user choose Nginx or Apache as the web server. | Must | v1 |
 | SVC-03 | The system shall detect port conflicts (80, 443, 3306) before start and name the process holding the port. | Must | MVP |
 | SVC-04 | The system shall restart a crashed service up to 3 times, then report the failure with its last log lines. | Should | MVP |
-| SVC-05 | The system shall support PostgreSQL, Redis and Memcached as optional services. | Should | v1 |
+| SVC-05 | The system shall support PostgreSQL, Redis and Memcached as optional services. Redis implemented Nov 25, 2026 (PostgreSQL and Memcached still to do): Redis 8.10.3, the MSYS2 build by the redis-windows project (built in public by GitHub Actions from the official source; SHA-256 from the release), opt-in through `ebur install redis`, the Settings card or the setup wizard (`--redis`). It runs on 127.0.0.1:6379 only from `etc\redis\redis.conf` (relative paths: the MSYS2 build cannot read `C:/` paths), keeps data in `data\redis\`, and saves it on stop. The phpredis 6.3.0 extension (PECL; php.net publishes no checksums, so Ebur pins its own) is installed per PHP series 7.4–8.5 and loaded through `conf.d\ebur-redis.ini`; PHP 8.6 has only a release candidate, so the doctor and the Settings card point to predis instead. | Should | v1 |
 | SVC-06 | The system shall optionally start chosen services when Ebur launches. | Should | MVP |
 
 ### 3.4 Sites and virtual hosts (SITE)

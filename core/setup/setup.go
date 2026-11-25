@@ -50,8 +50,9 @@ type Choices struct {
 	DB      string `json:"db"`
 	DBPort  int    `json:"dbPort"`
 	Adminer bool   `json:"adminer"`
-	Mail    bool   `json:"mail"` // Mailpit catches outgoing mail (TOOL-03)
-	Node    bool   `json:"node"` // newest Node.js LTS for front-end tools (PROJ-03)
+	Mail    bool   `json:"mail"`  // Mailpit catches outgoing mail (TOOL-03)
+	Node    bool   `json:"node"`  // newest Node.js LTS for front-end tools (PROJ-03)
+	Redis   bool   `json:"redis"` // Redis plus the phpredis extension (SVC-05)
 	HTTPS   bool   `json:"https"`
 }
 
@@ -189,6 +190,9 @@ func Run(ctx context.Context, root paths.Root, c Choices, hooks Hooks, emit func
 	if c.Node {
 		steps = append(steps, Step{ID: "node", Label: "Node.js (npm, Vite)"})
 	}
+	if c.Redis {
+		steps = append(steps, Step{ID: "redis", Label: "Redis (cache and queues)"})
+	}
 	if c.HTTPS {
 		steps = append(steps, Step{ID: "https", Label: "Local HTTPS"})
 	}
@@ -291,6 +295,11 @@ func Run(ctx context.Context, root paths.Root, c Choices, hooks Hooks, emit func
 	}
 	if c.Node {
 		if err := installStep("node", "node", ""); err != nil { // "" = newest LTS
+			return err
+		}
+	}
+	if c.Redis {
+		if err := installStep("redis", "redis", ""); err != nil { // also brings phpredis
 			return err
 		}
 	}

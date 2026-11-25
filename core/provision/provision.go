@@ -127,7 +127,26 @@ func MariaDBPaths(root paths.Root, version string) (dataDir, myIni string) {
 const (
 	MailSMTPPort = 1025
 	MailUIPort   = 8025
+	// RedisPort is Redis's usual port, on 127.0.0.1 only (SVC-05).
+	RedisPort = 6379
 )
+
+// PHPRedisDLL returns the phpredis extension for a PHP version, if
+// installed: phpredis builds are stored per PHP series (bin\phpredis\8.5).
+func PHPRedisDLL(root paths.Root, phpVersion string) (string, bool) {
+	p := filepath.Join(root.RuntimeDir("phpredis", PHPSeries(phpVersion)), "php_redis.dll")
+	_, err := os.Stat(p)
+	return p, err == nil
+}
+
+// PHPSeries returns "8.5" for "8.5.13".
+func PHPSeries(v string) string {
+	p := strings.SplitN(v, ".", 3)
+	if len(p) < 2 {
+		return v
+	}
+	return p[0] + "." + p[1]
+}
 
 // WriteMyIni (re)writes my.ini for a version with the given port. The
 // stack calls it on every start, so a db_port change needs no re-setup.

@@ -60,6 +60,22 @@
     }
   }
 
+  let redis = $state(null)
+  let redisBusy = $state(false)
+  let redisError = $state('')
+  async function installRedis() {
+    redisBusy = true
+    redisError = ''
+    try {
+      redis = await call('InstallRedis')
+    } catch (e) {
+      redisError = errorText(e)
+    } finally {
+      redisBusy = false
+    }
+  }
+  let redisEnv = $derived(redis ? `REDIS_CLIENT=phpredis\nREDIS_HOST=127.0.0.1\nREDIS_PASSWORD=null\nREDIS_PORT=${redis.port}` : '')
+
   let node = $state(null)
   let nodeBusy = $state('')
   let nodeError = $state('')
@@ -84,6 +100,7 @@
   async function load() {
     mail = await call('Mail')
     node = await call('Node')
+    redis = await call('Redis')
     hosts = await call('Hosts')
     appearance = await call('Appearance')
     db = await call('Database')
@@ -169,6 +186,27 @@
       </div>
     {/if}
     {#if mailError}<pre class="err">{mailError}</pre>{/if}
+  </section>
+
+  <section class="card">
+    <h3>Redis</h3>
+    {#if !redis}
+      <p class="muted">Loading…</p>
+    {:else if !redis.installed}
+      <p>A fast store for caching, sessions and queues (Laravel's <code>CACHE_STORE=redis</code>, <code>QUEUE_CONNECTION=redis</code>). Runs on this computer only, with PHP's redis extension.</p>
+      <button class="primary" disabled={redisBusy} onclick={installRedis}>{redisBusy ? 'Installing Redis…' : 'Install Redis'}</button>
+    {:else}
+      <dl>
+        <dt>Server</dt><dd>Redis {redis.version}</dd>
+        <dt>Address</dt><dd class="mono">127.0.0.1:{redis.port}</dd>
+        {#if redis.phpWith.length}<dt>PHP</dt><dd>extension in PHP {redis.phpWith.join(', ')}</dd>{/if}
+      </dl>
+      {#if redis.phpWithout.length}
+        <p class="muted note">PHP {redis.phpWithout.join(', ')} has no redis extension yet. Laravel can use the pure-PHP client there: <code>composer require predis/predis</code> and <code>REDIS_CLIENT=predis</code>.</p>
+      {/if}
+      <div class="row"><button onclick={() => copy(redisEnv, 'redis')}>{copied === 'redis' ? 'Copied' : 'Copy Laravel .env settings'}</button></div>
+    {/if}
+    {#if redisError}<pre class="err">{redisError}</pre>{/if}
   </section>
 
   <section class="card">

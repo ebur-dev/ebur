@@ -105,6 +105,7 @@ type statusJSON struct {
 	HTTPS       bool          `json:"https"`
 	Adminer     string        `json:"adminer,omitempty"`
 	Mail        string        `json:"mail,omitempty"`
+	Redis       string        `json:"redis,omitempty"`
 	Sites       []siteJSON    `json:"sites"`
 	Shares      []share.Share `json:"shares"`
 }
@@ -121,7 +122,7 @@ func toStatusJSON(st host.Status) statusJSON {
 	out := statusJSON{
 		Running: st.Summary, Services: []serviceJSON{}, Sites: []siteJSON{}, Shares: st.Shares,
 		PHP: st.Info.PHP, PHPVersions: st.Info.PHPVersions, Nginx: st.Info.Nginx, MariaDB: st.Info.MariaDB,
-		HTTPS: st.Info.HTTPS, Adminer: st.Info.Adminer, Mail: st.Info.Mail,
+		HTTPS: st.Info.HTTPS, Adminer: st.Info.Adminer, Mail: st.Info.Mail, Redis: st.Info.Redis,
 	}
 	if out.Shares == nil {
 		out.Shares = []share.Share{}

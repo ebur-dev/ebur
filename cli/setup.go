@@ -20,6 +20,7 @@ func setupCmd() *cobra.Command {
 		dbPort           int
 		noAdminer        bool
 		noMail, withNode bool
+		withRedis        bool
 		noHTTPS, noStart bool
 	)
 	c := &cobra.Command{
@@ -38,7 +39,7 @@ func setupCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			ch := setup.Choices{PHP: php, DB: db, DBPort: dbPort, Adminer: !noAdminer, Mail: !noMail, Node: withNode, HTTPS: !noHTTPS}
+			ch := setup.Choices{PHP: php, DB: db, DBPort: dbPort, Adminer: !noAdminer, Mail: !noMail, Node: withNode, Redis: withRedis, HTTPS: !noHTTPS}
 			if ch.PHP == "" {
 				ch.PHP = opts.PHPDefault
 			}
@@ -67,6 +68,7 @@ func setupCmd() *cobra.Command {
 			}
 			fmt.Printf("  Mail:       %v\n", map[bool]string{true: "captured by Mailpit at mail." + opts.TLD, false: "no capture"}[ch.Mail])
 			fmt.Printf("  Node.js:    %v\n", map[bool]string{true: "newest LTS, for npm and Vite", false: "no (add later with `ebur node install 24`, or --node)"}[ch.Node])
+			fmt.Printf("  Redis:      %v\n", map[bool]string{true: "yes, on 127.0.0.1:6379, with the phpredis extension", false: "no (add later with `ebur install redis`, or --redis)"}[ch.Redis])
 			fmt.Printf("  HTTPS:      %v\n", map[bool]string{true: "yes (Windows will ask to trust Ebur's certificate)", false: "no"}[ch.HTTPS])
 			for _, w := range opts.Warnings {
 				fmt.Println("  warning:", w)
@@ -116,6 +118,7 @@ func setupCmd() *cobra.Command {
 	c.Flags().BoolVar(&noAdminer, "no-adminer", false, "do not install Adminer")
 	c.Flags().BoolVar(&noMail, "no-mail", false, "do not install Mailpit (mail capture)")
 	c.Flags().BoolVar(&withNode, "node", false, "also install Node.js (newest LTS) for front-end tools")
+	c.Flags().BoolVar(&withRedis, "redis", false, "also install Redis and the phpredis extension")
 	c.Flags().BoolVar(&noHTTPS, "no-https", false, "do not set up local HTTPS")
 	c.Flags().BoolVar(&noStart, "no-start", false, "install only; do not start services or edit the hosts file")
 	return c

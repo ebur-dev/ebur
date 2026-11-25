@@ -74,6 +74,7 @@ func Run(root paths.Root, opt Options) []Check {
 		{"composer", false, "ebur install composer"},
 		{"mailpit", false, "ebur install mailpit"},
 		{"node", false, "ebur node install 24"},
+		{"redis", false, "ebur install redis"},
 	} {
 		c, v := checkRuntime(root, cfg, rt.name, rt.required, rt.install)
 		add(c)
@@ -98,6 +99,17 @@ func Run(root paths.Root, opt Options) []Check {
 	}
 	if active["mariadb"] != "" {
 		wanted = append(wanted, cfg.DBPort)
+	}
+	if active["redis"] != "" {
+		wanted = append(wanted, provision.RedisPort)
+		// SVC-05: PHP versions without a phpredis build use predis instead.
+		phps, _ := runtimes.Installed(root, "php")
+		for _, v := range phps {
+			if _, ok := provision.PHPRedisDLL(root, v); !ok {
+				add(Check{"phpredis for PHP " + provision.PHPSeries(v), Info, "not installed (no build exists yet, or the download failed)",
+					"Run `ebur install phpredis " + provision.PHPSeries(v) + "`; if none exists, Laravel can use `composer require predis/predis` with REDIS_CLIENT=predis."})
+			}
+		}
 	}
 	for _, p := range wanted {
 		add(checkPort(root, p, opt.HostRunning))

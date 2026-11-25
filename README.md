@@ -75,6 +75,7 @@ ebur db                     database credentials and an .env snippet
 ebur db snapshot shop       save shop's database (ebur db restore shop latest puts it back)
 ebur share shop             temporary public https:// link for a client or phone (ends after 1 h)
 ebur mail                   where caught mail goes, and .env settings
+ebur install redis          Redis on 127.0.0.1:6379, with PHP's redis extension
 ebur ssl install            local HTTPS (ssl uninstall removes it)
 ebur hosts sync             map site names to 127.0.0.1
 ebur exec composer install  run a command with Ebur's PHP and Composer

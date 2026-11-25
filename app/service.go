@@ -634,6 +634,51 @@ func (a *App) InstallMail() (MailInfo, error) {
 	return a.Mail(), a.after(nil)
 }
 
+// RedisInfo is what the Redis card shows (SVC-05).
+type RedisInfo struct {
+	Installed  bool     `json:"installed"`
+	Version    string   `json:"version"`
+	Port       int      `json:"port"`
+	PHPWith    []string `json:"phpWith"`    // PHP series with the phpredis extension
+	PHPWithout []string `json:"phpWithout"` // PHP series without it (use predis)
+}
+
+func (a *App) Redis() RedisInfo {
+	info := RedisInfo{Port: provision.RedisPort, PHPWith: []string{}, PHPWithout: []string{}}
+	inst, _ := runtimes.Installed(a.root, "redis")
+	if len(inst) == 0 {
+		return info
+	}
+	info.Installed, info.Version = true, inst[0]
+	phps, _ := runtimes.Installed(a.root, "php")
+	seen := map[string]bool{}
+	for _, v := range phps {
+		s := provision.PHPSeries(v)
+		if seen[s] {
+			continue
+		}
+		seen[s] = true
+		if _, ok := provision.PHPRedisDLL(a.root, v); ok {
+			info.PHPWith = append(info.PHPWith, s)
+		} else {
+			info.PHPWithout = append(info.PHPWithout, s)
+		}
+	}
+	return info
+}
+
+// InstallRedis downloads Redis and the phpredis extension for each
+// installed PHP version, then restarts running services so it starts.
+func (a *App) InstallRedis() (RedisInfo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	if _, err := install.Runtime(ctx, a.root, "redis", "", nil, nil); err != nil {
+		return a.Redis(), withHint(err)
+	}
+	a.restartIfRunning()
+	return a.Redis(), a.after(nil)
+}
+
 // NodeVersion is one Node.js release on the Node card.
 type NodeVersion struct {
 	Version string `json:"version"`

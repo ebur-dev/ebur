@@ -92,7 +92,7 @@ func Runtime(ctx context.Context, root paths.Root, name, want string, progress r
 	if err != nil {
 		return res, err
 	}
-	if cfg.Active[name] == "" {
+	if cfg.Active[name] == "" && name != "phpredis" { // phpredis is per PHP version, not switched
 		cfg.Active[name] = rel.Version
 		if err := config.Save(root.Config(), cfg); err != nil {
 			return res, err
@@ -113,7 +113,41 @@ func Runtime(ctx context.Context, root paths.Root, name, want string, progress r
 			}
 		}
 	}
+	// SVC-05: Redis brings the phpredis extension for every installed PHP
+	// version, and a PHP installed later gets it too.
+	switch name {
+	case "redis":
+		phps, _ := runtimes.Installed(root, "php")
+		for _, v := range phps {
+			res.Report.Warnings = append(res.Report.Warnings, installPHPRedis(ctx, root, v, &res.Report)...)
+		}
+	case "php":
+		if r, _ := runtimes.Installed(root, "redis"); len(r) > 0 {
+			res.Report.Warnings = append(res.Report.Warnings, installPHPRedis(ctx, root, rel.Version, &res.Report)...)
+		}
+	}
 	return res, nil
+}
+
+// installPHPRedis installs the phpredis build for phpVersion's series,
+// reporting a warning (not an error) when none exists yet.
+func installPHPRedis(ctx context.Context, root paths.Root, phpVersion string, rep *provision.Report) []string {
+	series := provision.PHPSeries(phpVersion)
+	if _, ok := provision.PHPRedisDLL(root, phpVersion); ok {
+		return nil
+	}
+	m, err := Manifest()
+	if err != nil {
+		return []string{err.Error()}
+	}
+	if _, err := Resolve(m, "phpredis", series); err != nil {
+		return []string{fmt.Sprintf("no phpredis extension exists yet for PHP %s; Laravel can use the pure-PHP client instead: `composer require predis/predis` and REDIS_CLIENT=predis in .env", series)}
+	}
+	if _, err := Runtime(ctx, root, "phpredis", series, nil, nil); err != nil {
+		return []string{fmt.Sprintf("phpredis for PHP %s was not installed: %v (run `ebur install phpredis %s`)", series, err, series)}
+	}
+	rep.Steps = append(rep.Steps, "phpredis extension for PHP "+series)
+	return nil
 }
 
 func contains(list []string, s string) bool {

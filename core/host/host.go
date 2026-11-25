@@ -53,6 +53,7 @@ type Info struct {
 	HTTPS       bool            `json:"https,omitempty"`
 	Adminer     string          `json:"adminer,omitempty"` // URL
 	Mail        string          `json:"mail,omitempty"`    // Mailpit URL (TOOL-03)
+	Redis       string          `json:"redis,omitempty"`   // Redis version (SVC-05)
 	Sites       []sites.Site    `json:"sites"`
 	Skipped     []sites.Skipped `json:"skipped,omitempty"`
 }

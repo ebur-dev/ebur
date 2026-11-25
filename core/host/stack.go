@@ -281,6 +281,24 @@ func BuildStack(root paths.Root, cfg config.Settings) (Stack, error) {
 		return Stack{}, err
 	}
 
+	// SVC-05: Redis on 127.0.0.1:6379, and phpredis for PHP that has it.
+	redisVer, err := optional(root, cfg, "redis")
+	if err != nil {
+		return Stack{}, err
+	}
+	if redisVer != "" {
+		s, err := redisSpec(root, redisVer)
+		if err != nil {
+			return Stack{}, err
+		}
+		specs = append(specs, s)
+		ports = append(ports, provision.RedisPort)
+		info.Redis = redisVer
+	}
+	if err := writeRedisIni(root, redisVer != ""); err != nil {
+		return Stack{}, err
+	}
+
 	listen := listenAddr + ":" + strconv.Itoa(httpPort)
 	tempDir := filepath.Join(root.Data(), "nginx-temp")
 	if err := os.MkdirAll(tempDir, 0o755); err != nil {

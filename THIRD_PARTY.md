@@ -39,6 +39,8 @@ you install them, checks each download's SHA-256, and keeps them in `bin\`.
 | Mailpit (mail capture) | github.com/axllent/mailpit | MIT |
 | Node.js (with npm and Corepack) | nodejs.org | MIT (Node.js; bundled parts under their own licences, see its LICENSE) |
 | cloudflared (share links) | github.com/cloudflare/cloudflared | Apache-2.0 |
+| Redis (MSYS2 build by the redis-windows project, from official Redis source) | github.com/redis-windows/redis-windows | Redis 8: AGPLv3, RSALv2 or SSPLv1, at your choice; build scripts Apache-2.0; bundled MSYS2 runtime libraries under their own licences |
+| phpredis (PHP extension for Redis) | downloads.php.net (PECL) | PHP License 3.01 |
 | Adminer | github.com/vrana/adminer | Apache-2.0 or GPL-2.0 |
 | CA certificate bundle (Mozilla roots, via curl) | curl.se | MPL-2.0 |
 
