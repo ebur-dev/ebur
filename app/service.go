@@ -25,6 +25,7 @@ import (
 	"github.com/ebur-dev/ebur/core/hostsync"
 	"github.com/ebur-dev/ebur/core/install"
 	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/project"
 	"github.com/ebur-dev/ebur/core/runtimes"
 	"github.com/ebur-dev/ebur/core/setup"
 	"github.com/ebur-dev/ebur/core/shellenv"
@@ -86,7 +87,12 @@ type SiteRow struct {
 	URL     string `json:"url"`
 	DocRoot string `json:"docRoot"`
 	PHP     string `json:"php"`
-	Running bool   `json:"running"`
+	// PHP-04: where the version came from (default, .ebur, composer.json),
+	// what the project asked for, and any problem meeting that.
+	PHPSource  string `json:"phpSource"`
+	PHPWant    string `json:"phpWant"`
+	PHPProblem string `json:"phpProblem"`
+	Running    bool   `json:"running"`
 }
 
 func (a *App) Overview() (Overview, error) {
@@ -126,7 +132,12 @@ func (a *App) Overview() (Overview, error) {
 		if s.Name == "db" {
 			continue
 		}
-		ov.Sites = append(ov.Sites, SiteRow{Name: s.Name, URL: scheme + "://" + s.Host, DocRoot: s.DocRoot, PHP: ov.PHPActive, Running: nginxUp})
+		c := project.Resolve(s.Dir, ov.PHPInstalled, ov.PHPActive)
+		ov.Sites = append(ov.Sites, SiteRow{
+			Name: s.Name, URL: scheme + "://" + s.Host, DocRoot: s.DocRoot,
+			PHP: c.Version, PHPSource: c.Source, PHPWant: c.Want, PHPProblem: c.Problem,
+			Running: nginxUp,
+		})
 	}
 	// Empty lists, not null, so the page can iterate without checks.
 	if ov.Skipped == nil {
@@ -230,6 +241,31 @@ func (a *App) StartService(name string) (host.Status, error) {
 func (a *App) StopService(name string) (host.Status, error) {
 	var st host.Status
 	return st, a.after(a.b.call("stop", host.Selection{Services: []string{name}}, &st))
+}
+
+// SetSitePHP pins one site's PHP version in its .ebur file, or with
+// version "" returns it to the default (PHP-04). Running services restart
+// so the change applies at once.
+func (a *App) SetSitePHP(site, version string) error {
+	cfg, err := config.Load(a.root.Config())
+	if err != nil {
+		return withHint(err)
+	}
+	found, _, err := sites.Scan(a.root.WWW(), cfg.TLD)
+	if err != nil {
+		return err
+	}
+	for _, s := range found {
+		if s.Name != site {
+			continue
+		}
+		if err := project.SetPHP(s.Dir, version); err != nil {
+			return err
+		}
+		a.restartIfRunning()
+		return a.after(nil)
+	}
+	return fmt.Errorf("no site named %q", site)
 }
 
 // SetPHP switches the active PHP version (PHP-01, PHP-02).

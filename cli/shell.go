@@ -47,7 +47,8 @@ func execCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			env := shellenv.For(root)
+			cwd, _ := os.Getwd()
+			env := shellenv.For(root, cwd) // inside a site: that site's PHP (PHP-04)
 			environ := env.Environ(os.Environ())
 			// Look the command up on the Ebur PATH, not the parent's.
 			path, err := lookPath(args[0], environ)

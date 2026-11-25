@@ -22,7 +22,7 @@ func TestFor(t *testing.T) {
 	cfg.Active["php"] = "8.4.28" // not the newest: the active one must win
 	config.Save(root.Config(), cfg)
 
-	env := For(root)
+	env := For(root, "")
 	if len(env.Path) != 3 || env.Path[0] != root.RuntimeDir("php", "8.4.28") {
 		t.Fatalf("path: %v", env.Path)
 	}
@@ -34,6 +34,30 @@ func TestFor(t *testing.T) {
 	}
 	if s := env.Summary(); s != "php, composer, mariadb" {
 		t.Fatalf("summary %q", s)
+	}
+}
+
+// PHP-04: inside a site, the site's PHP version is the one on PATH.
+func TestForUsesTheSitesPHP(t *testing.T) {
+	root, _ := paths.New(t.TempDir())
+	os.MkdirAll(root.RuntimeDir("php", "8.5.13"), 0o755)
+	os.MkdirAll(root.RuntimeDir("php", "8.3.37"), 0o755)
+	legacy := filepath.Join(root.WWW(), "legacy")
+	os.MkdirAll(filepath.Join(legacy, "app", "Http"), 0o755)
+	os.WriteFile(filepath.Join(legacy, ".ebur"), []byte("php: 8.3\n"), 0o644)
+	os.MkdirAll(filepath.Join(root.WWW(), "modern"), 0o755)
+
+	deep := For(root, filepath.Join(legacy, "app", "Http"))
+	if deep.PHP != "8.3.37" || deep.Path[0] != root.RuntimeDir("php", "8.3.37") || !strings.Contains(deep.PHPSource, "legacy") {
+		t.Fatalf("inside legacy: %+v", deep)
+	}
+	if !strings.HasSuffix(deep.Vars["PHPRC"], "8.3.37") {
+		t.Fatalf("PHPRC %s", deep.Vars["PHPRC"])
+	}
+	for _, d := range []string{filepath.Join(root.WWW(), "modern"), root.WWW(), t.TempDir()} {
+		if e := For(root, d); e.PHP != "8.5.13" {
+			t.Errorf("%s: PHP %s, want the default", d, e.PHP)
+		}
 	}
 }
 
@@ -57,7 +81,7 @@ func TestEnviron(t *testing.T) {
 
 func TestEmptyRoot(t *testing.T) {
 	root, _ := paths.New(t.TempDir())
-	env := For(root)
+	env := For(root, "")
 	if len(env.Path) != 0 || env.Vars["PHPRC"] != "" {
 		t.Fatalf("%+v", env)
 	}

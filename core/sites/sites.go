@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/ebur-dev/ebur/core/project"
 )
 
 // Site is one folder served at <name>.<tld>.
@@ -17,6 +19,9 @@ type Site struct {
 	Host    string `json:"host"`
 	Dir     string `json:"dir"`
 	DocRoot string `json:"doc_root"`
+	// PHP is the version serving this site and why (PHP-04). Scan leaves
+	// it empty; the stack fills it in with project.Resolve.
+	PHP project.Choice `json:"php"`
 }
 
 // A folder name must be a valid DNS label to become a host name.

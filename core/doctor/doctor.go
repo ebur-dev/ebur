@@ -16,6 +16,7 @@ import (
 	"github.com/ebur-dev/ebur/core/config"
 	"github.com/ebur-dev/ebur/core/paths"
 	"github.com/ebur-dev/ebur/core/ports"
+	"github.com/ebur-dev/ebur/core/project"
 	"github.com/ebur-dev/ebur/core/provision"
 	"github.com/ebur-dev/ebur/core/runtimes"
 	"github.com/ebur-dev/ebur/core/sites"
@@ -113,6 +114,16 @@ func Run(root paths.Root, opt Options) []Check {
 	add(checkHosts(hostsFile, hosts))
 	for _, s := range skipped {
 		add(Check{"Site " + s.Folder, Warn, s.Reason, "Rename the folder in www\\."})
+	}
+	// PHP-04: a site asking for a PHP version that is not installed still
+	// runs, on the default version; say so.
+	if def := active["php"]; def != "" {
+		installed, _ := runtimes.Installed(root, "php")
+		for _, s := range found {
+			if c := project.Resolve(s.Dir, installed, def); c.Problem != "" {
+				add(Check{"Site " + s.Name + " PHP", Warn, "asks for PHP " + c.Want + " in " + c.Source, c.Problem})
+			}
+		}
 	}
 
 	if opt.HostRunning {

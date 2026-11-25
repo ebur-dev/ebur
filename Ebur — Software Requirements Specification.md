@@ -113,7 +113,7 @@ The MVP needs 23 Must requirements across runtimes, services, sites and the two 
 | PHP-01 | The system shall let the user set a global active PHP version from the tray, GUI or `ebur php <version>`. | Must | MVP |
 | PHP-02 | Switching versions shall regenerate web server config and restart affected services within 5 seconds. | Must | MVP |
 | PHP-03 | The system shall generate `php.ini` from a template on first install, preserving user edits on later switches. | Must | MVP |
-| PHP-04 | A project's `.ebur` file or `composer.json` PHP constraint shall select its PHP version, running multiple versions at once via separate PHP-FPM / CGI pools. | Must | v1 |
+| PHP-04 | A project's `.ebur` file or `composer.json` PHP constraint shall select its PHP version, running multiple versions at once via separate PHP-FPM / CGI pools. Implemented Nov 25, 2026: `.ebur` first, then `composer.json` (the default version is kept when it satisfies the constraint, so fewer pools run), then the default; one php-cgi pool per version in use; `ebur exec` and the terminal use the project's version inside a site folder; a version that cannot be met falls back to the default with a warning. | Must | v1 |
 | PHP-05 | The system shall list, enable and disable PHP extensions without manual ini editing. | Should | v1 |
 | PHP-06 | The system shall toggle Xdebug on or off per PHP version in one action. | Should | v1 |
 | PHP-07 | The system shall bundle Composer and expose it on the Ebur terminal PATH. | Must | MVP |

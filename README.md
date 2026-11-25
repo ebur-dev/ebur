@@ -25,8 +25,11 @@ everything in one folder.
 
 - **Sites:** every folder in `www\` is served at `<folder>.test`; Laravel and
   Symfony `public\` folders are detected.
-- **PHP 8.2 to 8.6:** switch versions in one click; PHP runs as a pool of
-  workers, so a slow request does not block others.
+- **PHP 8.2 to 8.6, per project:** each site can run its own PHP version at
+  the same time, chosen by a `.ebur` file (`php: "8.3"`) or the PHP
+  requirement in its `composer.json`; everything else uses the default,
+  which you switch in one click. PHP runs as a pool of workers, so a slow
+  request does not block others.
 - **MariaDB** with a generated root password, and **Adminer** at `db.test`.
 - **Local HTTPS:** Ebur's own certificate authority, limited to `.test` and
   `localhost` names, so its key cannot be used to impersonate real sites.
@@ -55,7 +58,8 @@ explains what to allow.
 ebur setup                  first-run setup (same as the window's wizard)
 ebur start | stop | restart services: nginx, php, mariadb
 ebur status                 what is running, and the site URLs
-ebur php 8.4                switch PHP; services restart in about a second
+ebur php 8.4                switch the default PHP; restarts in about a second
+ebur sites php shop 8.3     pin one site's PHP (writes www\shop\.ebur)
 ebur php install 8.3        add another PHP version
 ebur sites                  list sites
 ebur db                     database credentials and an .env snippet

@@ -69,6 +69,18 @@ func TestRuntimeAndIni(t *testing.T) {
 	}
 }
 
+func TestSitePHPProblem(t *testing.T) {
+	root, _ := paths.New(t.TempDir())
+	os.MkdirAll(filepath.Join(root.RuntimeDir("php", "8.5.13"), "ext"), 0o755)
+	legacy := filepath.Join(root.WWW(), "legacy")
+	os.MkdirAll(legacy, 0o755)
+	os.WriteFile(filepath.Join(legacy, "composer.json"), []byte(`{"require":{"php":"^7.4"}}`), 0o644)
+	c := find(Run(root, Options{HostsFile: filepath.Join(t.TempDir(), "none")}), "Site legacy PHP")
+	if c.Level != Warn || !strings.Contains(c.Detail, "^7.4") || !strings.Contains(c.Hint, "composer.json") {
+		t.Fatalf("%+v", c)
+	}
+}
+
 func TestHosts(t *testing.T) {
 	hosts := filepath.Join(t.TempDir(), "hosts")
 	os.WriteFile(hosts, []byte("127.0.0.1 shop.test # ebur\n10.0.0.1 blog.test\n::1 api.test\n"), 0o644)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/ebur-dev/ebur/core/host"
 	"github.com/ebur-dev/ebur/core/install"
 	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/project"
 	"github.com/ebur-dev/ebur/core/runtimes"
 	"github.com/ebur-dev/ebur/core/sites"
 )
@@ -274,10 +276,27 @@ func listRuntime(root paths.Root, name string) error {
 	return w.Flush()
 }
 
+// resolvedSites lists sites with the PHP version each one gets (PHP-04).
+func resolvedSites(root paths.Root, cfg config.Settings) ([]sites.Site, []sites.Skipped, error) {
+	found, skipped, err := sites.Scan(root.WWW(), cfg.TLD)
+	if err != nil {
+		return nil, nil, err
+	}
+	installed, _ := runtimes.Installed(root, "php")
+	def := cfg.Active["php"]
+	if def == "" && len(installed) > 0 {
+		def = installed[0]
+	}
+	for i := range found {
+		found[i].PHP = project.Resolve(found[i].Dir, installed, def)
+	}
+	return found, skipped, nil
+}
+
 func sitesCmd() *cobra.Command {
-	return &cobra.Command{
+	c := &cobra.Command{
 		Use:   "sites",
-		Short: "List sites: every folder in www\\ is served at <folder>.test",
+		Short: "List sites and the PHP version serving each one",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := findRoot()
@@ -288,7 +307,7 @@ func sitesCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			found, skipped, err := sites.Scan(root.WWW(), cfg.TLD)
+			found, skipped, err := resolvedSites(root, cfg)
 			if err != nil {
 				return err
 			}
@@ -298,24 +317,80 @@ func sitesCmd() *cobra.Command {
 			}
 			var st host.Status
 			running := call(root, "status", nil, &st) == nil && st.Summary != "none"
-			php := orNone(cfg.Active["php"])
-			if running {
-				php = st.Info.PHP
+			scheme := "http"
+			if running && st.Info.HTTPS {
+				scheme = "https"
 			}
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "URL\tPHP\tSTATUS\tDOCUMENT ROOT")
+			fmt.Fprintln(w, "URL\tPHP\tCHOSEN BY\tSTATUS\tDOCUMENT ROOT")
 			for _, s := range found {
 				status := "stopped"
 				if running {
 					status = "running"
 				}
-				fmt.Fprintf(w, "http://%s\t%s\t%s\t%s\n", s.Host, php, status, s.DocRoot)
+				by := s.PHP.Source
+				if s.PHP.Want != "" {
+					by += " (" + s.PHP.Want + ")"
+				}
+				fmt.Fprintf(w, "%s://%s\t%s\t%s\t%s\t%s\n", scheme, s.Host, s.PHP.Version, by, status, s.DocRoot)
 			}
 			w.Flush()
+			for _, s := range found {
+				if s.PHP.Problem != "" {
+					fmt.Printf("warning: %s: %s\n", s.Name, s.PHP.Problem)
+				}
+			}
 			for _, s := range skipped {
 				fmt.Printf("skipped www\\%s: %s\n", s.Folder, s.Reason)
 			}
 			return nil
 		},
 	}
+	c.AddCommand(&cobra.Command{
+		Use:   "php <site> <version|default>",
+		Short: "Pin a site's PHP version in its .ebur file (PHP-04)",
+		Example: "  ebur sites php shop 8.3        serve shop with the newest installed 8.3.x\n" +
+			"  ebur sites php shop default    back to the default version",
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := findRoot()
+			if err != nil {
+				return err
+			}
+			cfg, err := config.Load(root.Config())
+			if err != nil {
+				return err
+			}
+			found, _, err := resolvedSites(root, cfg)
+			if err != nil {
+				return err
+			}
+			var site *sites.Site
+			for i := range found {
+				if found[i].Name == strings.ToLower(args[0]) {
+					site = &found[i]
+				}
+			}
+			if site == nil {
+				return &hintErr{fmt.Sprintf("no site named %q", args[0]), "Run `ebur sites` to see site names."}
+			}
+			want := args[1]
+			if want == "default" {
+				want = ""
+			} else if _, err := matchInstalled(root, "php", want); err != nil {
+				return err
+			}
+			if err := project.SetPHP(site.Dir, want); err != nil {
+				return err
+			}
+			if want == "" {
+				fmt.Printf("%s now uses the default PHP version (removed php from %s\\.ebur).\n", site.Name, site.Name)
+			} else {
+				fmt.Printf("%s pinned to PHP %s in %s\n", site.Name, want, filepath.Join(site.Dir, project.FileName))
+				fmt.Println("Commit .ebur with the project so everyone gets the same version.")
+			}
+			return restartIfRunning(root, "to apply it")
+		},
+	})
+	return c
 }

@@ -38,14 +38,17 @@ type Stack struct {
 
 // Info describes the running configuration for status displays.
 type Info struct {
-	PHP     string          `json:"php"`
-	Nginx   string          `json:"nginx"`
-	Listen  string          `json:"listen"`
-	MariaDB string          `json:"mariadb,omitempty"`
-	HTTPS   bool            `json:"https,omitempty"`
-	Adminer string          `json:"adminer,omitempty"` // URL
-	Sites   []sites.Site    `json:"sites"`
-	Skipped []sites.Skipped `json:"skipped,omitempty"`
+	PHP string `json:"php"` // the default version
+	// PHPVersions are all versions with a running pool, default first
+	// (PHP-04: sites can pin other versions).
+	PHPVersions []string        `json:"php_versions,omitempty"`
+	Nginx       string          `json:"nginx"`
+	Listen      string          `json:"listen"`
+	MariaDB     string          `json:"mariadb,omitempty"`
+	HTTPS       bool            `json:"https,omitempty"`
+	Adminer     string          `json:"adminer,omitempty"` // URL
+	Sites       []sites.Site    `json:"sites"`
+	Skipped     []sites.Skipped `json:"skipped,omitempty"`
 }
 
 // BuildFunc turns settings into a Stack. Tests replace it.

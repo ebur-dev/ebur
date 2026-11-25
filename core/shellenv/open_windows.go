@@ -14,8 +14,11 @@ import (
 // Open starts cmd.exe in its own console window with Ebur's environment,
 // in workDir (GUI-04, `ebur terminal`).
 func Open(root paths.Root, workDir string) error {
-	env := For(root)
+	env := For(root, workDir)
 	greet := "Ebur terminal. On PATH: " + env.Summary()
+	if env.PHPSource != "" {
+		greet += ". PHP " + env.PHP + " for " + env.PHPSource
+	}
 	cmdline := `cmd.exe /K "title Ebur terminal && echo ` + greet + ` && echo."`
 	pi, err := startConsole(cmdline, env.Environ(os.Environ()), workDir, windows.SW_SHOWNORMAL)
 	if err != nil {

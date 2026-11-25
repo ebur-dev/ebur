@@ -10,13 +10,16 @@ import (
 
 	"github.com/ebur-dev/ebur/core/config"
 	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/project"
 	"github.com/ebur-dev/ebur/core/runtimes"
 )
 
 // Env is what a console needs on top of the user's own environment.
 type Env struct {
-	Path []string          // folders to put in front of PATH
-	Vars map[string]string // variables to set
+	Path      []string          // folders to put in front of PATH
+	Vars      map[string]string // variables to set
+	PHP       string            // the PHP version on PATH
+	PHPSource string            // the site that chose it, e.g. "shop (.ebur)"; "" for the default
 }
 
 func active(root paths.Root, cfg config.Settings, rt string) string {
@@ -29,11 +32,33 @@ func active(root paths.Root, cfg config.Settings, rt string) string {
 	return ""
 }
 
-// For returns the environment for root's active runtimes.
-func For(root paths.Root) Env {
+// siteDir returns www\<site> when dir is inside a site, else "".
+func siteDir(root paths.Root, dir string) string {
+	if dir == "" {
+		return ""
+	}
+	rel, err := filepath.Rel(root.WWW(), dir)
+	if err != nil || rel == "." || strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
+		return ""
+	}
+	first := strings.SplitN(filepath.ToSlash(rel), "/", 2)[0]
+	return filepath.Join(root.WWW(), first)
+}
+
+// For returns the environment for root's runtimes. When dir is inside a
+// site, PHP is that site's version (PHP-04), so `ebur exec composer` and
+// `php artisan` match what serves the site.
+func For(root paths.Root, dir string) Env {
 	cfg, _ := config.Load(root.Config())
 	env := Env{Vars: map[string]string{paths.EnvRoot: root.Dir()}}
-	if v := active(root, cfg, "php"); v != "" {
+	v := active(root, cfg, "php")
+	if sd := siteDir(root, dir); sd != "" && v != "" {
+		installed, _ := runtimes.Installed(root, "php")
+		c := project.Resolve(sd, installed, v)
+		v, env.PHPSource = c.Version, filepath.Base(sd)+" ("+c.Source+")"
+	}
+	env.PHP = v
+	if v != "" {
 		env.Path = append(env.Path, root.RuntimeDir("php", v))
 		// php.exe looks for php.ini next to itself; without these it runs
 		// with no extensions (no OpenSSL, so Composer cannot download).

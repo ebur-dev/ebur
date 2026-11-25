@@ -1,5 +1,20 @@
 <script>
   let { ov, run } = $props()
+
+  const sourceText = { default: 'default', '.ebur': '.ebur file', 'composer.json': 'composer.json' }
+
+  // "" means the default version: the site's php line is removed.
+  function choose(site, value) {
+    run('Switching ' + site.name + ' to PHP ' + (value || ov.phpActive) + '…', 'SetSitePHP', site.name, value)
+  }
+
+  // The picker shows a pin only when the .ebur file set it.
+  const pinned = (s) => (s.phpSource === '.ebur' && !s.phpProblem ? s.php : '')
+
+  // The "no pin" choice names what actually runs: composer.json can pick
+  // a version other than the default.
+  const autoLabel = (s) =>
+    s.phpSource === 'composer.json' && !s.phpProblem ? `Automatic: ${s.php}` : `Default (${ov.phpActive})`
 </script>
 
 <div class="row head">
@@ -25,7 +40,18 @@
           <tr>
             <td><strong>{s.name}</strong></td>
             <td><button class="link" onclick={() => run('', 'OpenURL', s.url)}>{s.url}</button></td>
-            <td class="mono">{s.php}</td>
+            <td>
+              <select value={pinned(s)} onchange={(e) => choose(s, e.currentTarget.value)} title="PHP version for this site">
+                <option value="">{autoLabel(s)}</option>
+                {#each ov.phpInstalled as v}<option value={v}>{v}</option>{/each}
+              </select>
+              {#if s.phpSource === 'composer.json' && !s.phpProblem}
+                <div class="src">from composer.json ({s.phpWant})</div>
+              {:else if s.phpSource === '.ebur' && !s.phpProblem}
+                <div class="src">pinned in .ebur</div>
+              {/if}
+              {#if s.phpProblem}<div class="problem" title={s.phpProblem}>{s.phpProblem}</div>{/if}
+            </td>
             <td><span class="dot {s.running ? 'running' : ''}"></span>{s.running ? 'Running' : 'Stopped'}</td>
             <td class="mono muted path" title={s.docRoot}>{s.docRoot}</td>
           </tr>
@@ -33,6 +59,7 @@
       </tbody>
     </table>
   </div>
+  <p class="muted note">Each site can use its own PHP version: pick one here, or let the project's <code>composer.json</code> decide. Picking a version writes a <code>.ebur</code> file in the site folder; commit it so your team gets the same version.</p>
 {/if}
 
 {#if ov.adminer}
@@ -49,6 +76,10 @@
   .spacer { flex: 1; }
   .flush { padding: 0; overflow: hidden; }
   .empty p { margin: 0 0 10px; }
-  .path { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .path { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .warn { color: var(--gold); }
+  .src { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .problem { font-size: 12px; color: var(--gold); margin-top: 3px; max-width: 260px; }
+  .note { font-size: 13px; margin-top: 10px; }
+  select { font-size: 13px; padding: 3px 6px; }
 </style>
