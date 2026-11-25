@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/dbserver"
 	"github.com/ebur-dev/ebur/core/paths"
 	"github.com/ebur-dev/ebur/core/php"
 	"github.com/ebur-dev/ebur/internal/fsutil"
@@ -163,16 +164,25 @@ func prepareMariaDB(ctx context.Context, root paths.Root, dir, version string, s
 	if err != nil {
 		return rep, err
 	}
+	changed := false
 	if cfg.DBRootPassword == "" {
 		pw, err := password(20)
 		if err != nil {
 			return rep, err
 		}
-		cfg.DBRootPassword = pw
+		cfg.DBRootPassword, changed = pw, true
+		rep.Steps = append(rep.Steps, "generated a database root password (see `ebur db`)")
+	}
+	// SVC-01: MariaDB added next to a MySQL that already holds its port
+	// (e.g. MySQL chosen in the wizard took 3306) gets a free port instead.
+	if _, mysqlOK := dbserver.Get(root, cfg, dbserver.MySQL); mysqlOK && cfg.MySQLPort == cfg.DBPort {
+		cfg.DBPort, changed = PickMySQLPort(cfg.MySQLPort), true
+		rep.Steps = append(rep.Steps, fmt.Sprintf("MariaDB will use port %d (MySQL uses %d)", cfg.DBPort, cfg.MySQLPort))
+	}
+	if changed {
 		if err := config.Save(root.Config(), cfg); err != nil {
 			return rep, err
 		}
-		rep.Steps = append(rep.Steps, "generated a database root password (see `ebur db`)")
 	}
 	if freed, err := TrimMariaDB(dir); err != nil {
 		rep.Warnings = append(rep.Warnings, "could not remove MariaDB's debug files: "+err.Error())

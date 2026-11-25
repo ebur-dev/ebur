@@ -197,6 +197,11 @@ type Hooks struct {
 // hosts prompt is reported but does not fail setup.
 func Run(ctx context.Context, root paths.Root, c Choices, hooks Hooks, emit func([]Step)) error {
 	var mu sync.Mutex
+	// Labels use the ending chosen in this setup, not the one saved before it.
+	tld := c.TLD
+	if tld == "" {
+		tld = tldOf(root)
+	}
 	steps := []Step{
 		{ID: "nginx", Label: "Web server (Nginx)"},
 		{ID: "php", Label: "PHP " + c.PHP},
@@ -209,11 +214,11 @@ func Run(ctx context.Context, root paths.Root, c Choices, hooks Hooks, emit func
 		}
 		steps = append(steps, Step{ID: "mariadb", Label: label})
 		if c.Adminer {
-			steps = append(steps, Step{ID: "adminer", Label: "Adminer (db." + tldOf(root) + ")"})
+			steps = append(steps, Step{ID: "adminer", Label: "Adminer (db." + tld + ")"})
 		}
 	}
 	if c.Mail {
-		steps = append(steps, Step{ID: "mailpit", Label: "Mail capture (mail." + tldOf(root) + ")"})
+		steps = append(steps, Step{ID: "mailpit", Label: "Mail capture (mail." + tld + ")"})
 	}
 	if c.Node {
 		steps = append(steps, Step{ID: "node", Label: "Node.js (npm, Vite)"})

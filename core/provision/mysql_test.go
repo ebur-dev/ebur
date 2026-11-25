@@ -1,11 +1,14 @@
 package provision
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/ebur-dev/ebur/core/config"
 	"github.com/ebur-dev/ebur/core/dbserver"
 	"github.com/ebur-dev/ebur/core/paths"
 )
@@ -42,6 +45,30 @@ func TestClientCnf(t *testing.T) {
 	b, _ := os.ReadFile(p)
 	if !strings.Contains(string(b), "[client]") || !strings.Contains(string(b), `password="s3cret"`) || !strings.Contains(string(b), "port=3306") {
 		t.Errorf("client.cnf:\n%s", b)
+	}
+}
+
+// MySQL took 3306 (chosen first in the wizard); MariaDB added later must
+// not try the same port.
+func TestMariaDBAvoidsMySQLPort(t *testing.T) {
+	root, _ := paths.New(t.TempDir())
+	os.MkdirAll(root.RuntimeDir("mysql", "8.4.13.1"), 0o755)
+	cfg := config.Defaults() // DBPort 3306
+	cfg.MySQLPort = 3306
+	cfg.DBRootPassword = "pw"
+	config.Save(root.Config(), cfg)
+	data, _ := MariaDBPaths(root, "12.3.4")
+	os.MkdirAll(filepath.Join(data, "mysql"), 0o755) // existing data: no install-db run
+	if _, err := Prepare(context.Background(), root, "mariadb", "12.3.4", nil); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := config.Load(root.Config())
+	if got.DBPort == 3306 || got.MySQLPort != 3306 {
+		t.Fatalf("mariadb port %d, mysql port %d", got.DBPort, got.MySQLPort)
+	}
+	_, ini := MariaDBPaths(root, "12.3.4")
+	if b, _ := os.ReadFile(ini); !strings.Contains(string(b), fmt.Sprintf("port=%d", got.DBPort)) {
+		t.Errorf("my.ini does not use the new port:\n%s", b)
 	}
 }
 

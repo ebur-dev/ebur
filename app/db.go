@@ -107,6 +107,18 @@ func (a *App) InstallMySQL(series string) (DBInfo, error) {
 	return a.Database(), a.after(nil)
 }
 
+// InstallMariaDB adds MariaDB (newest LTS) next to MySQL, on a free port
+// if MySQL already uses MariaDB's, then restarts running services.
+func (a *App) InstallMariaDB() (DBInfo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	if _, err := install.Runtime(ctx, a.root, "mariadb", "", nil, nil); err != nil {
+		return a.Database(), withHint(err)
+	}
+	a.restartIfRunning()
+	return a.Database(), a.after(nil)
+}
+
 // SetMySQL switches to another installed MySQL version.
 func (a *App) SetMySQL(version string) (DBInfo, error) {
 	cfg, err := config.Load(a.root.Config())

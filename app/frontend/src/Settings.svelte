@@ -163,7 +163,7 @@
     dbBusy = label
     dbError = ''
     try {
-      db = await call(method, arg)
+      db = await (arg === undefined ? call(method) : call(method, arg))
     } catch (e) {
       dbError = errorText(e)
       db = await call('Database')
@@ -241,6 +241,12 @@
             {#each mysqlInstalled as o}<option value={o.version}>MySQL {o.version}{o.legacy ? ' (end of life)' : ''}</option>{/each}
           </select>
         </label>
+      {/if}
+      {#if !db.servers.some((s) => s.kind === 'mariadb')}
+        <div class="row">
+          <button disabled={!!dbBusy} onclick={() => dbAction('InstallMariaDB', undefined, 'Installing MariaDB (about 80 MB)…')}>{dbBusy || 'Install MariaDB'}</button>
+        </div>
+        <p class="muted note">MariaDB runs next to MySQL on its own port; projects choose one through DB_PORT in their .env.</p>
       {/if}
       {#if mysqlAvailable.length}
         <div class="row">
