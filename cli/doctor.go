@@ -11,7 +11,7 @@ import (
 )
 
 func doctorCmd() *cobra.Command {
-	return &cobra.Command{
+	return supportsJSON(&cobra.Command{
 		Use:   "doctor",
 		Short: "Check ports, runtimes, configs and the hosts file, and suggest fixes",
 		Args:  cobra.NoArgs,
@@ -22,6 +22,28 @@ func doctorCmd() *cobra.Command {
 			}
 			running := call(root, "ping", nil, nil) == nil
 			checks := doctor.Run(root, doctor.Options{HostRunning: running})
+			if jsonOut {
+				out := struct {
+					Checks   []doctor.Check `json:"checks"`
+					Problems int            `json:"problems"`
+					Warnings int            `json:"warnings"`
+				}{Checks: checks}
+				for _, c := range checks {
+					switch c.Level {
+					case doctor.Fail:
+						out.Problems++
+					case doctor.Warn:
+						out.Warnings++
+					}
+				}
+				if err := emit(out); err != nil {
+					return err
+				}
+				if out.Problems > 0 {
+					os.Exit(1) // same exit code as the text report
+				}
+				return nil
+			}
 			marks := map[doctor.Level]string{doctor.OK: "ok  ", doctor.Info: "info", doctor.Warn: "WARN", doctor.Fail: "FAIL"}
 			width := 0
 			for _, c := range checks {
@@ -48,5 +70,5 @@ func doctorCmd() *cobra.Command {
 			}
 			return nil
 		},
-	}
+	})
 }

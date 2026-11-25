@@ -68,6 +68,9 @@ func shareCmd() *cobra.Command {
 			if err := call(root, "share", req, &sh); err != nil {
 				return err
 			}
+			if jsonOut {
+				return emit(sh)
+			}
 			fmt.Printf("\n  %s\n\n", sh.URL)
 			fmt.Printf("%s is public at that address until %s (%s).\n", sh.Site, sh.Expires.Format("15:04"), untilText(sh.Expires))
 			if sh.Password != "" {
@@ -101,12 +104,19 @@ func shareCmd() *cobra.Command {
 			return nil
 		},
 	})
-	return c
+	return supportsJSON(c)
 }
 
 func listShares(root paths.Root) error {
 	var shares []share.Share
-	if err := call(root, "shares", nil, &shares); err != nil || len(shares) == 0 {
+	err := call(root, "shares", nil, &shares)
+	if jsonOut {
+		if shares == nil {
+			shares = []share.Share{}
+		}
+		return emit(shares) // not running: nothing is shared
+	}
+	if err != nil || len(shares) == 0 {
 		fmt.Println("Nothing is shared. Share a site with `ebur share <site>`.")
 		return nil
 	}

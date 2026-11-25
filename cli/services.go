@@ -18,6 +18,7 @@ import (
 	"github.com/ebur-dev/ebur/core/host"
 	"github.com/ebur-dev/ebur/core/ipc"
 	"github.com/ebur-dev/ebur/core/paths"
+	"github.com/ebur-dev/ebur/core/share"
 	"github.com/ebur-dev/ebur/core/supervisor"
 )
 
@@ -62,7 +63,7 @@ func ensureHost(root paths.Root) error {
 func selection(args []string) host.Selection { return host.Selection{Services: args} }
 
 func statusCmd() *cobra.Command {
-	return &cobra.Command{
+	return supportsJSON(&cobra.Command{
 		Use:   "status",
 		Short: "Show services and sites",
 		Args:  cobra.NoArgs,
@@ -72,7 +73,16 @@ func statusCmd() *cobra.Command {
 				return err
 			}
 			var st host.Status
-			if err := call(root, "status", nil, &st); errors.Is(err, ipc.ErrNotRunning) {
+			err = call(root, "status", nil, &st)
+			if jsonOut {
+				if errors.Is(err, ipc.ErrNotRunning) {
+					return emit(statusJSON{Running: "none", Services: []serviceJSON{}, Sites: []siteJSON{}, Shares: []share.Share{}})
+				} else if err != nil {
+					return err
+				}
+				return emit(toStatusJSON(st))
+			}
+			if errors.Is(err, ipc.ErrNotRunning) {
 				fmt.Println("Ebur is not running. Start it with: ebur start")
 				return nil
 			} else if err != nil {
@@ -81,7 +91,52 @@ func statusCmd() *cobra.Command {
 			printStatus(st)
 			return nil
 		},
+	})
+}
+
+// statusJSON is `ebur status --json`.
+type statusJSON struct {
+	Running     string        `json:"running"` // all, some or none
+	Services    []serviceJSON `json:"services"`
+	PHP         string        `json:"php,omitempty"`
+	PHPVersions []string      `json:"php_versions,omitempty"`
+	Nginx       string        `json:"nginx,omitempty"`
+	MariaDB     string        `json:"mariadb,omitempty"`
+	HTTPS       bool          `json:"https"`
+	Adminer     string        `json:"adminer,omitempty"`
+	Mail        string        `json:"mail,omitempty"`
+	Sites       []siteJSON    `json:"sites"`
+	Shares      []share.Share `json:"shares"`
+}
+
+type serviceJSON struct {
+	Name     string `json:"name"`
+	State    string `json:"state"`
+	PID      int    `json:"pid,omitempty"`
+	Restarts int    `json:"restarts"`
+	Error    string `json:"error,omitempty"`
+}
+
+func toStatusJSON(st host.Status) statusJSON {
+	out := statusJSON{
+		Running: st.Summary, Services: []serviceJSON{}, Sites: []siteJSON{}, Shares: st.Shares,
+		PHP: st.Info.PHP, PHPVersions: st.Info.PHPVersions, Nginx: st.Info.Nginx, MariaDB: st.Info.MariaDB,
+		HTTPS: st.Info.HTTPS, Adminer: st.Info.Adminer, Mail: st.Info.Mail,
 	}
+	if out.Shares == nil {
+		out.Shares = []share.Share{}
+	}
+	for _, s := range st.Services {
+		out.Services = append(out.Services, serviceJSON{Name: s.Name, State: string(s.State), PID: s.PID, Restarts: s.Restarts, Error: s.Error})
+	}
+	scheme := "http"
+	if st.Info.HTTPS {
+		scheme = "https"
+	}
+	for _, s := range st.Info.Sites {
+		out.Sites = append(out.Sites, toSiteJSON(s, scheme))
+	}
+	return out
 }
 
 func serviceCmd(use, short, method string, needsHost bool) *cobra.Command {

@@ -184,7 +184,7 @@ The MVP needs 23 Must requirements across runtimes, services, sites and the two 
 | ID | Requirement | Priority | Release |
 | --- | --- | --- | --- |
 | CLI-01 | Every GUI action shall have an equivalent `ebur` command. | Must | MVP |
-| CLI-02 | Commands shall support `--json` output for scripts and AI coding tools. | Should | v1 |
+| CLI-02 | Commands shall support `--json` output for scripts and AI coding tools. Implemented Nov 25, 2026 for the commands that report state: `status`, `sites`, `doctor`, `db`, `db list`, `db snapshots`, `share` (list, and the new share with its address), `php list`, `node list`. Stdout carries exactly one JSON document (progress text goes to stderr); errors are `{"error", "next_step"}` with exit code 1; `doctor --json` keeps exit code 1 when it finds problems; other commands refuse `--json` and name the ones that support it. | Should | v1 |
 | CLI-03 | `ebur doctor` shall check ports, certificates, hosts entries and runtimes, and suggest fixes. | Should | MVP |
 
 ### 3.10 Updates (UPD)

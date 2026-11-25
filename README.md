@@ -80,6 +80,7 @@ ebur hosts sync             map site names to 127.0.0.1
 ebur exec composer install  run a command with Ebur's PHP and Composer
 ebur terminal               open a console with Ebur's tools on PATH
 ebur doctor                 find and explain problems
+ebur status --json          machine-readable output (also sites, doctor, db, db list, db snapshots, share, php/node list)
 ```
 
 ## Build from source

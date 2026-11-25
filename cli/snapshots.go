@@ -104,6 +104,24 @@ func snapshotCmds() []*cobra.Command {
 			for _, s := range snaps {
 				count[s.Database]++
 			}
+			if jsonOut {
+				type row struct {
+					Name      string   `json:"name"`
+					Tables    int      `json:"tables"`
+					Bytes     int64    `json:"bytes"`
+					Sites     []string `json:"sites"`
+					Snapshots int      `json:"snapshots"`
+				}
+				out := []row{}
+				for _, d := range dbs {
+					s := siteOf[d.Name]
+					if s == nil {
+						s = []string{}
+					}
+					out = append(out, row{d.Name, d.Tables, d.Bytes, s, count[d.Name]})
+				}
+				return emit(out)
+			}
 			if len(dbs) == 0 {
 				fmt.Println("No databases yet. `ebur new <name> --laravel` creates one, or use Adminer.")
 				return nil
@@ -171,6 +189,9 @@ func snapshotCmds() []*cobra.Command {
 			all, err := dbsnap.List(root, db)
 			if err != nil {
 				return err
+			}
+			if jsonOut {
+				return emit(all)
 			}
 			if len(all) == 0 {
 				fmt.Println("No snapshots yet. Save one with `ebur db snapshot <site|database> [label]`.")
@@ -256,5 +277,5 @@ func snapshotCmds() []*cobra.Command {
 			return nil
 		},
 	}
-	return []*cobra.Command{list, snapshot, snapshots, restore, del}
+	return []*cobra.Command{supportsJSON(list), snapshot, supportsJSON(snapshots), restore, del}
 }

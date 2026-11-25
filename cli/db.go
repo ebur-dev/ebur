@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -46,6 +47,17 @@ func dbCmd() *cobra.Command {
 				}
 			}
 			data, _ := provision.MariaDBPaths(root, version)
+			if jsonOut {
+				out := map[string]any{
+					"server": "MariaDB", "version": version, "state": strings.SplitN(state, " ", 2)[0],
+					"host": "127.0.0.1", "port": cfg.DBPort, "user": "root", "password": cfg.DBRootPassword,
+					"data_dir": data,
+				}
+				if a, _ := runtimes.Installed(root, "adminer"); len(a) > 0 {
+					out["adminer"] = "http://db." + cfg.TLD
+				}
+				return emit(out)
+			}
 			fmt.Printf("MariaDB %s, %s\n\n", version, state)
 			fmt.Printf("  Host:      127.0.0.1\n  Port:      %d\n  User:      root\n  Password:  %s\n\n", cfg.DBPort, cfg.DBRootPassword)
 			fmt.Printf("  .env:      DB_HOST=127.0.0.1 DB_PORT=%d DB_USERNAME=root DB_PASSWORD=%s\n", cfg.DBPort, cfg.DBRootPassword)
@@ -96,5 +108,5 @@ func dbCmd() *cobra.Command {
 		},
 	})
 	c.AddCommand(snapshotCmds()...)
-	return c
+	return supportsJSON(c)
 }

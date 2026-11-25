@@ -34,6 +34,7 @@ func main() {
 		phpCmd(), nodeCmd(), installCmd(), sitesCmd(), dbCmd(), mailCmd(), sslCmd(), doctorCmd(),
 		terminalCmd(), execCmd(), hostsCmd(), setupCmd(), newCmd(), linkCmd(), unlinkCmd(), shareCmd(), daemonCmd(),
 	)
+	enableJSON(root)
 	if err := root.Execute(); err != nil {
 		printError(err)
 		os.Exit(1)
@@ -42,6 +43,10 @@ func main() {
 
 // printError shows the error and, when known, a next step (NFR-14).
 func printError(err error) {
+	if jsonOut {
+		emitError(err)
+		return
+	}
 	fmt.Fprintln(os.Stderr, "error:", err)
 	var ie *ipc.Error
 	var he interface{ Hint() string }

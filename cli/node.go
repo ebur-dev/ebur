@@ -77,7 +77,7 @@ func nodeCmd() *cobra.Command {
 				return installRuntime(root, "node", strings.TrimPrefix(args[0], "v"))
 			},
 		},
-		&cobra.Command{
+		supportsJSON(&cobra.Command{
 			Use:   "list",
 			Short: "List installed and available Node.js versions",
 			Args:  cobra.NoArgs,
@@ -88,7 +88,7 @@ func nodeCmd() *cobra.Command {
 				}
 				return listRuntime(root, "node")
 			},
-		},
+		}),
 		&cobra.Command{
 			Use:   "remove <version>",
 			Short: "Remove an installed Node.js version",

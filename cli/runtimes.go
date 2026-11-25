@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/ebur-dev/ebur/core/certs"
 	"github.com/ebur-dev/ebur/core/config"
 	"github.com/ebur-dev/ebur/core/host"
 	"github.com/ebur-dev/ebur/core/install"
@@ -209,7 +210,7 @@ func phpCmd() *cobra.Command {
 				return installRuntime(root, "php", args[0])
 			},
 		},
-		&cobra.Command{
+		supportsJSON(&cobra.Command{
 			Use:   "list",
 			Short: "List installed and available PHP versions",
 			Args:  cobra.NoArgs,
@@ -220,7 +221,7 @@ func phpCmd() *cobra.Command {
 				}
 				return listRuntime(root, "php")
 			},
-		},
+		}),
 		&cobra.Command{
 			Use:   "remove <version>",
 			Short: "Remove an installed PHP version",
@@ -272,6 +273,27 @@ func listRuntime(root paths.Root, name string) error {
 	}
 	installed, _ := runtimes.Installed(root, name)
 	cfg, _ := config.Load(root.Config())
+	if jsonOut {
+		type row struct {
+			Version   string `json:"version"`
+			Installed bool   `json:"installed"`
+			Active    bool   `json:"active"`
+			EOL       string `json:"eol,omitempty"`
+			Ended     bool   `json:"end_of_life"`
+		}
+		out := []row{}
+		seen := map[string]bool{}
+		for _, r := range m.Releases(name, "x64") {
+			seen[r.Version] = true
+			out = append(out, row{r.Version, contains(installed, r.Version), cfg.Active[name] == r.Version, r.EOL, r.EndOfLife(time.Now())})
+		}
+		for _, v := range installed {
+			if !seen[v] {
+				out = append(out, row{Version: v, Installed: true, Active: cfg.Active[name] == v})
+			}
+		}
+		return emit(out)
+	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "VERSION\tSTATUS\tSECURITY SUPPORT")
 	seen := map[string]bool{}
@@ -320,6 +342,68 @@ func resolvedSites(root paths.Root, cfg config.Settings) ([]sites.Site, []sites.
 	return found, skipped, nil
 }
 
+// siteJSON is one site in --json output.
+type siteJSON struct {
+	Name    string       `json:"name"`
+	URL     string       `json:"url"`
+	Dir     string       `json:"dir"`
+	DocRoot string       `json:"doc_root"`
+	Target  string       `json:"linked_from,omitempty"` // `ebur link`
+	PHP     versionJSON  `json:"php"`
+	Node    *versionJSON `json:"node,omitempty"`
+}
+
+// versionJSON is the runtime version a site uses and why.
+type versionJSON struct {
+	Version string `json:"version"`
+	Source  string `json:"source"`         // default, .ebur, composer.json, .nvmrc, package.json
+	Want    string `json:"want,omitempty"` // what the project asked for
+	Problem string `json:"problem,omitempty"`
+	EOL     string `json:"end_of_life,omitempty"` // set when past end of life
+}
+
+func toVersionJSON(rt string, c project.Choice) versionJSON {
+	v := versionJSON{Version: c.Version, Source: c.Source, Want: c.Want, Problem: c.Problem}
+	if s := install.SupportOf(rt, c.Version); s.Ended {
+		v.EOL = s.EOL
+	}
+	return v
+}
+
+func toSiteJSON(s sites.Site, scheme string) siteJSON {
+	return siteJSON{Name: s.Name, URL: scheme + "://" + s.Host, Dir: s.Dir, DocRoot: s.DocRoot, Target: s.Target, PHP: toVersionJSON("php", s.PHP)}
+}
+
+// emitSites prints `ebur sites --json`: every site with its PHP and Node
+// versions, plus folders that were skipped and why.
+func emitSites(root paths.Root, cfg config.Settings, found []sites.Site, skipped []sites.Skipped) error {
+	scheme := "http"
+	if certs.Dir(root.SSL()).Exists() {
+		scheme = "https"
+	}
+	nodes, _ := runtimes.Installed(root, "node")
+	nodeDef := cfg.Active["node"]
+	if nodeDef == "" && len(nodes) > 0 {
+		nodeDef = nodes[0]
+	}
+	out := struct {
+		Sites   []siteJSON      `json:"sites"`
+		Skipped []sites.Skipped `json:"skipped"`
+	}{Sites: []siteJSON{}, Skipped: skipped}
+	if out.Skipped == nil {
+		out.Skipped = []sites.Skipped{}
+	}
+	for _, s := range found {
+		j := toSiteJSON(s, scheme)
+		if len(nodes) > 0 {
+			n := toVersionJSON("node", project.ResolveNode(s.Dir, nodes, nodeDef))
+			j.Node = &n
+		}
+		out.Sites = append(out.Sites, j)
+	}
+	return emit(out)
+}
+
 func sitesCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "sites",
@@ -337,6 +421,9 @@ func sitesCmd() *cobra.Command {
 			found, skipped, err := resolvedSites(root, cfg)
 			if err != nil {
 				return err
+			}
+			if jsonOut {
+				return emitSites(root, cfg, found, skipped)
 			}
 			if len(found) == 0 && len(skipped) == 0 {
 				fmt.Printf("No sites yet. Create a folder in %s and it is served at <folder>.%s\n", root.WWW(), cfg.TLD)
@@ -450,5 +537,5 @@ func sitesCmd() *cobra.Command {
 			return restartIfRunning(root, "to apply it")
 		},
 	}, sitesNodeCmd())
-	return c
+	return supportsJSON(c)
 }
