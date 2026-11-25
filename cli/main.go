@@ -32,7 +32,7 @@ func main() {
 	root.AddCommand(
 		statusCmd(), startCmd(), stopCmd(), restartCmd(), quitCmd(),
 		phpCmd(), nodeCmd(), mysqlCmd(), installCmd(), sitesCmd(), dbCmd(), mailCmd(), sslCmd(), doctorCmd(),
-		terminalCmd(), execCmd(), hostsCmd(), setupCmd(), newCmd(), linkCmd(), unlinkCmd(), shareCmd(), tldCmd(), daemonCmd(),
+		terminalCmd(), execCmd(), hostsCmd(), setupCmd(), newCmd(), linkCmd(), unlinkCmd(), shareCmd(), tldCmd(), manifestCmd(), daemonCmd(),
 	)
 	enableJSON(root)
 	if err := root.Execute(); err != nil {

@@ -14,9 +14,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ebur-dev/ebur/core/catalog"
 	"github.com/ebur-dev/ebur/core/manifest"
 	"github.com/ebur-dev/ebur/internal/fsutil"
-	manifestdata "github.com/ebur-dev/ebur/manifest"
 )
 
 // FileName is the per-project settings file, committed with the project.
@@ -125,7 +125,7 @@ func Resolve(dir string, installed []string, active string) Choice {
 // Available lists the PHP versions Ebur can install (from the built-in
 // manifest), newest first. A variable so tests can replace it.
 var Available = func() []string {
-	m, err := manifest.Parse(manifestdata.JSON)
+	m, _, err := catalog.Load()
 	if err != nil {
 		return nil
 	}

@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ebur-dev/ebur/core/catalog"
 	"github.com/ebur-dev/ebur/core/certs"
 	"github.com/ebur-dev/ebur/core/config"
 	"github.com/ebur-dev/ebur/core/dbserver"
@@ -208,6 +209,17 @@ func Run(root paths.Root, opt Options) []Check {
 				add(Check{"Node " + v, Warn, detail, fmt.Sprintf("Upgrade the projects using it, then `ebur node remove %s`.", major(v))})
 			}
 		}
+	}
+
+	// SEC-02: which runtime list is in use.
+	if _, src, err := catalog.LoadFrom(root); err == nil {
+		detail := "built into this Ebur, from " + src.Generated.Format("2006-01-02")
+		if src.Kind == "downloaded" {
+			detail = "signed update from " + src.Generated.Format("2006-01-02") + " (newer than the built-in list)"
+		}
+		add(Check{"Runtime list", OK, detail, ""})
+	} else {
+		add(Check{"Runtime list", Fail, err.Error(), "Reinstall Ebur."})
 	}
 
 	if opt.HostRunning {

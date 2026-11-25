@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ebur-dev/ebur/core/catalog"
 	"github.com/ebur-dev/ebur/core/manifest"
-	manifestdata "github.com/ebur-dev/ebur/manifest"
 )
 
 // Sources of a site's Node version, besides SourceDefault and SourceEbur.
@@ -25,7 +25,7 @@ var nodeCodenames = map[string]string{
 // AvailableNode lists the Node versions Ebur can install, newest first.
 // A variable so tests can replace it.
 var AvailableNode = func() []string {
-	m, err := manifest.Parse(manifestdata.JSON)
+	m, _, err := catalog.Load()
 	if err != nil {
 		return nil
 	}

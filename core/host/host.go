@@ -145,7 +145,8 @@ func (h *Host) Run(ctx context.Context) error {
 	go ipc.Serve(ctx, ln, h.Handle)
 	watchCtx, stopWatch := context.WithCancel(ctx)
 	defer stopWatch()
-	go h.watch(watchCtx) // SITE-05
+	go h.watch(watchCtx)          // SITE-05
+	go h.refreshCatalog(watchCtx) // SEC-02: newer signed runtime list
 
 	if cfg, err := config.Load(h.Root.Config()); err == nil && len(cfg.AutoStart) > 0 { // SVC-06
 		if _, err := h.Start(Selection{Services: cfg.AutoStart}); err != nil {

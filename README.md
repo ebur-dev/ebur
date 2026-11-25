@@ -130,6 +130,15 @@ vendor. MySQL, MariaDB and Nginx updates are listed for a manual update.
 Run the same check locally with `go run ./build/manifest-update` (add
 `-write` to update the file).
 
+When the manifest changes on `main`, `.github/workflows/publish-manifest.yml`
+signs it (Ed25519, key in the `MANIFEST_SIGNING_KEY` secret) and publishes
+it on the `manifest` release. Installed copies check it daily and use it
+only if the signature matches the public key built into Ebur and it is
+newer than their own, so new versions and security fixes arrive without a
+new Ebur release. That check is a plain HTTPS request to GitHub with no
+identifier; `"manifest_url": "off"` in `ebur.json` turns it off, and
+`ebur manifest` shows which list is in use.
+
 ## Releases and download counts
 
 Pushing a version tag publishes a release: GitHub Actions runs the tests,

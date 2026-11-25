@@ -9,16 +9,20 @@ import (
 	goruntime "runtime"
 	"time"
 
+	"github.com/ebur-dev/ebur/core/catalog"
 	"github.com/ebur-dev/ebur/core/config"
 	"github.com/ebur-dev/ebur/core/manifest"
 	"github.com/ebur-dev/ebur/core/paths"
 	"github.com/ebur-dev/ebur/core/provision"
 	"github.com/ebur-dev/ebur/core/runtimes"
-	manifestdata "github.com/ebur-dev/ebur/manifest"
 )
 
-// Manifest returns the manifest built into this binary.
-func Manifest() (*manifest.Manifest, error) { return manifest.Parse(manifestdata.JSON) }
+// Manifest returns the manifest in use: the one built into this binary,
+// or a newer signed copy Ebur fetched (core/catalog).
+func Manifest() (*manifest.Manifest, error) {
+	m, _, err := catalog.Load() // built-in, or a newer signed download (SEC-02)
+	return m, err
+}
 
 // Resolve picks a release for this machine. Official PHP and MariaDB
 // builds are x64 only, so ARM64 falls back to x64 under emulation.

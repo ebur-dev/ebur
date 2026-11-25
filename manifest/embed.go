@@ -1,5 +1,5 @@
 // Package manifestdata embeds the runtime manifest shipped with this
-// build. Fetching a newer signed copy at startup arrives with SEC-02/08.
+// build. core/catalog prefers a newer, signed copy when one was fetched.
 package manifestdata
 
 import _ "embed"
