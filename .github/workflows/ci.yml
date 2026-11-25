@@ -50,7 +50,7 @@ jobs:
 
       - name: Check formatting (gofmt)
         run: |
-          $files = gofmt -l app cli core helper internal manifest
+          $files = gofmt -l app build cli core helper internal manifest
           if ($files) { Write-Host "Run gofmt -w on:"; $files; exit 1 }
 
       - name: Vet

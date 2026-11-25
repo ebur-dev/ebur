@@ -119,6 +119,17 @@ The requirements, decisions and known risks are in the
 [Software Requirements Specification](Ebur%20%E2%80%94%20Software%20Requirements%20Specification.md).
 Requirement IDs such as `SITE-02` appear in code comments, issues and commits.
 
+## Keeping runtime versions current
+
+`manifest/runtimes.json` lists every PHP, Node, database and tool version
+Ebur offers, with its download URL and SHA-256. A daily job
+(`.github/workflows/manifest-update.yml`) checks the official sources and
+opens a pull request when a newer version passes the rules: at least 14 days
+old unless it is a security release, Node LTS lines only, checksums from the
+vendor. MySQL, MariaDB and Nginx updates are listed for a manual update.
+Run the same check locally with `go run ./build/manifest-update` (add
+`-write` to update the file).
+
 ## Releases and download counts
 
 Pushing a version tag publishes a release: GitHub Actions runs the tests,

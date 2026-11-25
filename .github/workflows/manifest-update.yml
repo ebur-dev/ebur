@@ -1,0 +1,74 @@
+# Daily check for new runtime releases (SEC-08). Runs
+# build/manifest-update, which asks the official sources, applies Ebur's
+# rules (14-day wait unless a security release; Node LTS lines only; vendor
+# checksums only) and rewrites manifest/runtimes.json. When something
+# changed it opens a pull request, or updates the open one, for a
+# maintainer to review: nothing reaches users without a merge.
+#
+# Every run writes its report (including releases that need a manual
+# update, such as MySQL) to the run's summary page.
+#
+# Needs "Allow GitHub Actions to create and approve pull requests" in the
+# repository's Settings > Actions > General. Pull requests opened with the
+# workflow token do not start CI by themselves: the job runs the manifest
+# tests before opening one.
+name: Manifest update
+
+on:
+  schedule:
+    - cron: '17 5 * * *' # daily, 05:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write      # push the bot branch
+  pull-requests: write # open or update the pull request
+
+concurrency:
+  group: manifest-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Check release sources
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      BRANCH: bot/manifest-update
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Check the sources and update the manifest
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # GitHub API rate limit
+        run: |
+          go run ./build/manifest-update -write -summary "$RUNNER_TEMP/report.md"
+          cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Test the updated manifest
+        run: go test -count=1 ./core/manifest ./core/install ./core/project ./internal/manifestbot
+
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- manifest/runtimes.json; then
+            echo "No changes to the manifest."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add manifest/runtimes.json
+          git commit -m "Update runtime versions (manifest bot)" -m "$(cat "$RUNNER_TEMP/report.md")"
+          git push --force origin "$BRANCH"
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')" ]; then
+            gh pr edit "$BRANCH" --body-file "$RUNNER_TEMP/report.md"
+          else
+            gh pr create --head "$BRANCH" --base "${{ github.event.repository.default_branch }}" \
+              --title "Update runtime versions" --body-file "$RUNNER_TEMP/report.md"
+          fi

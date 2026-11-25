@@ -2,6 +2,150 @@
   "schema": 1,
   "generated": "2026-11-24T00:00:00Z",
   "runtimes": {
+    "adminer": [
+      {
+        "version": "6.3.1",
+        "url": "https://github.com/vrana/adminer/releases/download/v6.3.1/adminer-6.3.1.php",
+        "sha256": "a9aed04e4e68c4e46283804a69ee70cad4fbf23203b46470b760868b2fd9bd76",
+        "file": "index.php",
+        "arch": "x64",
+        "notes": "single PHP file, all database drivers; sha256 from the GitHub release digest"
+      }
+    ],
+    "cacert": [
+      {
+        "version": "2026.11.5",
+        "url": "https://curl.se/ca/cacert-2026-11-05.pem",
+        "sha256": "427c064216761a1e72a8b30f0d954d08cb6e4435a82091fb865afd20c8497285",
+        "file": "cacert.pem",
+        "arch": "x64",
+        "notes": "Mozilla root certificates as published by curl; PHP trusts these plus the Ebur CA (SSL-04)"
+      }
+    ],
+    "cloudflared": [
+      {
+        "version": "2026.11.1",
+        "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-windows-amd64.exe",
+        "sha256": "341deda3db5ec498a0482254d6c38c0b7cf01a30c37bb5dd95d2216d08955e35",
+        "file": "cloudflared.exe",
+        "arch": "x64",
+        "notes": "TOOL-04 share links (quick tunnels); sha256 from the GitHub release digest; newer than the 14-day rule because it fixes VULN-187395 and lets quick tunnels fall back to HTTP/2"
+      }
+    ],
+    "composer": [
+      {
+        "version": "2.11.3",
+        "url": "https://getcomposer.org/download/2.11.3/composer.phar",
+        "sha256": "04f8b003da4e3a2459056591fbfebd02b4dc3e5adeb158616b90cf55a65113ec",
+        "file": "composer.phar",
+        "arch": "x64",
+        "notes": "PHP-07; sha256 from getcomposer.org; 2.11.3 fixes GHSA-374h-4mh9-7rpm (arbitrary code execution)"
+      }
+    ],
+    "mailpit": [
+      {
+        "version": "1.34.0",
+        "url": "https://github.com/axllent/mailpit/releases/download/v1.34.0/mailpit-windows-amd64.zip",
+        "sha256": "8f080d41374bf22686606374a0a483c8563c1bf29ae078179792392ff8c911d7",
+        "arch": "x64",
+        "notes": "TOOL-03 mail capture; sha256 from the GitHub release digest; 1.34.0 fixes GHSA-v887-64wg-qqc9 (SMTP crash)"
+      }
+    ],
+    "mariadb": [
+      {
+        "version": "12.3.4",
+        "url": "https://downloads.mariadb.org/rest-api/mariadb/12.3.4/mariadb-12.3.4-winx64.zip",
+        "sha256": "178020ae8ff7d0caf77b5a3ad7e33e574e13001352d31b02503f97224e4b1f77",
+        "root": "mariadb-12.3.4-winx64",
+        "arch": "x64",
+        "notes": "LTS until 2029-06-12; sha256 from the MariaDB downloads API; URL redirects to a nearby mirror (archive.mariadb.org measured at 0.07-0.17 MB/s vs 61 MB/s)"
+      },
+      {
+        "version": "11.8.10",
+        "url": "https://downloads.mariadb.org/rest-api/mariadb/11.8.10/mariadb-11.8.10-winx64.zip",
+        "sha256": "05d04b46763ea3dc9111bfc82dc061e0a158c682a73d31ba34b13f2653c88d17",
+        "root": "mariadb-11.8.10-winx64",
+        "arch": "x64",
+        "notes": "LTS until 2028-06-04; sha256 from the MariaDB downloads API"
+      }
+    ],
+    "mysql": [
+      {
+        "version": "8.4.13.1",
+        "url": "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.13.1-winx64.zip",
+        "sha256": "b96b13299bd0e74deaf543ae77d7aea5dac57bfae24ae30902d8899912a43382",
+        "root": "mysql-8.4.13.1-winx64",
+        "arch": "x64",
+        "notes": "MySQL 8.4 LTS; Oracle MD5 d05e97a33b1bb0f49d88f09447bc3f9c and GPG signature (key B7B3B788A8D3785C) checked before pinning sha256",
+        "eol": "2032-04-30"
+      },
+      {
+        "version": "8.0.46",
+        "url": "https://cdn.mysql.com/Downloads/MySQL-8.0/mysql-8.0.46-winx64.zip",
+        "sha256": "28e9eda019d88eff4478d811ea2110b83f02a3966be157fe91cc55def3ab0d4d",
+        "root": "mysql-8.0.46-winx64",
+        "arch": "x64",
+        "notes": "legacy: end of life, for parity with MySQL 8.0 servers; Oracle MD5 003f527d5df61b663ff191038cd676bd and GPG signature (key B7B3B788A8D3785C) checked",
+        "eol": "2026-04-30"
+      },
+      {
+        "version": "5.7.44",
+        "url": "https://cdn.mysql.com/archives/mysql-5.7/mysql-5.7.44-winx64.zip",
+        "sha256": "aed661fe8120254a1dc30f5a4d5de346681922f4847cf025e2d4084eca78e70e",
+        "root": "mysql-5.7.44-winx64",
+        "arch": "x64",
+        "notes": "legacy: end of life, for old projects only; needs the Visual C++ 2013 runtime; Oracle MD5 7452012c6c03c05ccda60b0c01626204 and GPG signature (key 467B942D3A79BD29) checked",
+        "eol": "2023-10-31"
+      }
+    ],
+    "nginx": [
+      {
+        "version": "1.30.8",
+        "url": "https://nginx.org/download/nginx-1.30.8.zip",
+        "sha256": "ccd0c03ff665d4534e6595e455624ededc9eeb11a81a6a128920fcc928be1151",
+        "root": "nginx-1.30.8",
+        "arch": "x64",
+        "notes": "nginx.org publishes PGP signatures, not hashes; sha256 computed by Ebur"
+      }
+    ],
+    "node": [
+      {
+        "version": "26.13.1",
+        "url": "https://nodejs.org/dist/v26.13.1/node-v26.13.1-win-x64.zip",
+        "sha256": "e2edda75bfb089654705cf65a13b58933bfd5f57148e8ebda916f58a2474f1f7",
+        "root": "node-v26.13.1-win-x64",
+        "arch": "x64",
+        "notes": "LTS (Lithium), security release 2026-11-10; sha256 from SHASUMS256.txt",
+        "eol": "2029-04-30"
+      },
+      {
+        "version": "24.22.3",
+        "url": "https://nodejs.org/dist/v24.22.3/node-v24.22.3-win-x64.zip",
+        "sha256": "e612af99f626ab415ea225af6bce5c971feb448cb5cae250bb1c3fa50c5f7d9f",
+        "root": "node-v24.22.3-win-x64",
+        "arch": "x64",
+        "notes": "LTS (Krypton), security release 2026-11-10; sha256 from SHASUMS256.txt",
+        "eol": "2028-04-30"
+      },
+      {
+        "version": "22.23.5",
+        "url": "https://nodejs.org/dist/v22.23.5/node-v22.23.5-win-x64.zip",
+        "sha256": "4a191082e9706866830379d577d2cc8a50c776fcd9436a8d061b063ed0d9a0e3",
+        "root": "node-v22.23.5-win-x64",
+        "arch": "x64",
+        "notes": "LTS (Jod), security release 2026-11-11; sha256 from SHASUMS256.txt",
+        "eol": "2027-04-30"
+      },
+      {
+        "version": "20.20.2",
+        "url": "https://nodejs.org/dist/v20.20.2/node-v20.20.2-win-x64.zip",
+        "sha256": "dc3700fdd57a63eedb8fd7e3c7baaa32e6a740a1b904167ff4204bc68ed8bf77",
+        "root": "node-v20.20.2-win-x64",
+        "arch": "x64",
+        "notes": "legacy (Iron), last release; sha256 from SHASUMS256.txt",
+        "eol": "2026-04-30"
+      }
+    ],
     "php": [
       {
         "version": "8.6.0",
@@ -68,108 +212,55 @@
         "eol": "2022-11-28"
       }
     ],
-    "nginx": [
+    "phpredis": [
       {
-        "version": "1.30.8",
-        "url": "https://nginx.org/download/nginx-1.30.8.zip",
-        "sha256": "ccd0c03ff665d4534e6595e455624ededc9eeb11a81a6a128920fcc928be1151",
-        "root": "nginx-1.30.8",
+        "version": "8.5",
+        "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.5-nts-vs17-x64.zip",
+        "sha256": "481d6d1af45060ab41af6abe250faa270276fc47a493badc2e178024cdf6e255",
         "arch": "x64",
-        "notes": "nginx.org publishes PGP signatures, not hashes; sha256 computed by Ebur"
-      }
-    ],
-    "mariadb": [
-      {
-        "version": "12.3.4",
-        "url": "https://downloads.mariadb.org/rest-api/mariadb/12.3.4/mariadb-12.3.4-winx64.zip",
-        "sha256": "178020ae8ff7d0caf77b5a3ad7e33e574e13001352d31b02503f97224e4b1f77",
-        "root": "mariadb-12.3.4-winx64",
-        "arch": "x64",
-        "notes": "LTS until 2029-06-12; sha256 from the MariaDB downloads API; URL redirects to a nearby mirror (archive.mariadb.org measured at 0.07-0.17 MB/s vs 61 MB/s)"
+        "notes": "phpredis 6.3.0 for PHP 8.5 (version = PHP series); sha256 computed by Ebur from php.net, which publishes none"
       },
       {
-        "version": "11.8.10",
-        "url": "https://downloads.mariadb.org/rest-api/mariadb/11.8.10/mariadb-11.8.10-winx64.zip",
-        "sha256": "05d04b46763ea3dc9111bfc82dc061e0a158c682a73d31ba34b13f2653c88d17",
-        "root": "mariadb-11.8.10-winx64",
+        "version": "8.4",
+        "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.4-nts-vs17-x64.zip",
+        "sha256": "6db881ed172703962002d7e02dacc8ddb3f789904c648fee3e6ceec1319679cd",
         "arch": "x64",
-        "notes": "LTS until 2028-06-04; sha256 from the MariaDB downloads API"
-      }
-    ],
-    "node": [
-      {
-        "version": "26.13.1",
-        "url": "https://nodejs.org/dist/v26.13.1/node-v26.13.1-win-x64.zip",
-        "sha256": "e2edda75bfb089654705cf65a13b58933bfd5f57148e8ebda916f58a2474f1f7",
-        "root": "node-v26.13.1-win-x64",
-        "arch": "x64",
-        "notes": "LTS (Lithium), security release 2026-11-10; sha256 from SHASUMS256.txt",
-        "eol": "2029-04-30"
+        "notes": "phpredis 6.3.0 for PHP 8.4; sha256 computed by Ebur from php.net"
       },
       {
-        "version": "24.22.3",
-        "url": "https://nodejs.org/dist/v24.22.3/node-v24.22.3-win-x64.zip",
-        "sha256": "e612af99f626ab415ea225af6bce5c971feb448cb5cae250bb1c3fa50c5f7d9f",
-        "root": "node-v24.22.3-win-x64",
+        "version": "8.3",
+        "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.3-nts-vs16-x64.zip",
+        "sha256": "519fc1bdf54323d3ab08443c66f77e783d314c13b532e27cc8b390def7f81b60",
         "arch": "x64",
-        "notes": "LTS (Krypton), security release 2026-11-10; sha256 from SHASUMS256.txt",
-        "eol": "2028-04-30"
+        "notes": "phpredis 6.3.0 for PHP 8.3; sha256 computed by Ebur from php.net"
       },
       {
-        "version": "22.23.5",
-        "url": "https://nodejs.org/dist/v22.23.5/node-v22.23.5-win-x64.zip",
-        "sha256": "4a191082e9706866830379d577d2cc8a50c776fcd9436a8d061b063ed0d9a0e3",
-        "root": "node-v22.23.5-win-x64",
+        "version": "8.2",
+        "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.2-nts-vs16-x64.zip",
+        "sha256": "b2b730b99b97352212b338c01f7dde577857e31c5f8e1d011ec2871e63f8f87c",
         "arch": "x64",
-        "notes": "LTS (Jod), security release 2026-11-11; sha256 from SHASUMS256.txt",
-        "eol": "2027-04-30"
+        "notes": "phpredis 6.3.0 for PHP 8.2; sha256 computed by Ebur from php.net"
       },
       {
-        "version": "20.20.2",
-        "url": "https://nodejs.org/dist/v20.20.2/node-v20.20.2-win-x64.zip",
-        "sha256": "dc3700fdd57a63eedb8fd7e3c7baaa32e6a740a1b904167ff4204bc68ed8bf77",
-        "root": "node-v20.20.2-win-x64",
+        "version": "8.1",
+        "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.1-nts-vs16-x64.zip",
+        "sha256": "952ec845408e343f273eab109e62a9c7732178d93985120736da4a171d41b9b0",
         "arch": "x64",
-        "notes": "legacy (Iron), last release; sha256 from SHASUMS256.txt",
-        "eol": "2026-04-30"
-      }
-    ],
-    "mailpit": [
-      {
-        "version": "1.34.0",
-        "url": "https://github.com/axllent/mailpit/releases/download/v1.34.0/mailpit-windows-amd64.zip",
-        "sha256": "8f080d41374bf22686606374a0a483c8563c1bf29ae078179792392ff8c911d7",
-        "arch": "x64",
-        "notes": "TOOL-03 mail capture; sha256 from the GitHub release digest; 1.34.0 fixes GHSA-v887-64wg-qqc9 (SMTP crash)"
-      }
-    ],
-    "mysql": [
-      {
-        "version": "8.4.13.1",
-        "url": "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.13.1-winx64.zip",
-        "sha256": "b96b13299bd0e74deaf543ae77d7aea5dac57bfae24ae30902d8899912a43382",
-        "root": "mysql-8.4.13.1-winx64",
-        "arch": "x64",
-        "notes": "MySQL 8.4 LTS; Oracle MD5 d05e97a33b1bb0f49d88f09447bc3f9c and GPG signature (key B7B3B788A8D3785C) checked before pinning sha256",
-        "eol": "2032-04-30"
+        "notes": "phpredis 6.3.0 for PHP 8.1; sha256 computed by Ebur from php.net"
       },
       {
-        "version": "8.0.46",
-        "url": "https://cdn.mysql.com/Downloads/MySQL-8.0/mysql-8.0.46-winx64.zip",
-        "sha256": "28e9eda019d88eff4478d811ea2110b83f02a3966be157fe91cc55def3ab0d4d",
-        "root": "mysql-8.0.46-winx64",
+        "version": "8.0",
+        "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.0-nts-vs16-x64.zip",
+        "sha256": "9d3143049d3c27e715ea92a023dfab92389df985aec224d6ed9d092b4ba5ea9a",
         "arch": "x64",
-        "notes": "legacy: end of life, for parity with MySQL 8.0 servers; Oracle MD5 003f527d5df61b663ff191038cd676bd and GPG signature (key B7B3B788A8D3785C) checked",
-        "eol": "2026-04-30"
+        "notes": "phpredis 6.3.0 for PHP 8.0; sha256 computed by Ebur from php.net"
       },
       {
-        "version": "5.7.44",
-        "url": "https://cdn.mysql.com/archives/mysql-5.7/mysql-5.7.44-winx64.zip",
-        "sha256": "aed661fe8120254a1dc30f5a4d5de346681922f4847cf025e2d4084eca78e70e",
-        "root": "mysql-5.7.44-winx64",
+        "version": "7.4",
+        "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-7.4-nts-vc15-x64.zip",
+        "sha256": "c74f1fb5500b493050839330b4cbfb84dafc07da99b898939ac4b690fe74de1a",
         "arch": "x64",
-        "notes": "legacy: end of life, for old projects only; needs the Visual C++ 2013 runtime; Oracle MD5 7452012c6c03c05ccda60b0c01626204 and GPG signature (key 467B942D3A79BD29) checked",
-        "eol": "2023-10-31"
+        "notes": "phpredis 6.3.0 for PHP 7.4; sha256 computed by Ebur from php.net"
       }
     ],
     "redis": [
@@ -180,55 +271,6 @@
         "root": "Redis-8.10.3-Windows-x64-msys2",
         "arch": "x64",
         "notes": "SVC-05; MSYS2 build by the redis-windows project's GitHub Actions from the official Redis source; sha256 from the GitHub release digest; 8.10.3 is a Redis security release"
-      }
-    ],
-    "phpredis": [
-      { "version": "8.5", "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.5-nts-vs17-x64.zip", "sha256": "481d6d1af45060ab41af6abe250faa270276fc47a493badc2e178024cdf6e255", "arch": "x64", "notes": "phpredis 6.3.0 for PHP 8.5 (version = PHP series); sha256 computed by Ebur from php.net, which publishes none" },
-      { "version": "8.4", "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.4-nts-vs17-x64.zip", "sha256": "6db881ed172703962002d7e02dacc8ddb3f789904c648fee3e6ceec1319679cd", "arch": "x64", "notes": "phpredis 6.3.0 for PHP 8.4; sha256 computed by Ebur from php.net" },
-      { "version": "8.3", "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.3-nts-vs16-x64.zip", "sha256": "519fc1bdf54323d3ab08443c66f77e783d314c13b532e27cc8b390def7f81b60", "arch": "x64", "notes": "phpredis 6.3.0 for PHP 8.3; sha256 computed by Ebur from php.net" },
-      { "version": "8.2", "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.2-nts-vs16-x64.zip", "sha256": "b2b730b99b97352212b338c01f7dde577857e31c5f8e1d011ec2871e63f8f87c", "arch": "x64", "notes": "phpredis 6.3.0 for PHP 8.2; sha256 computed by Ebur from php.net" },
-      { "version": "8.1", "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.1-nts-vs16-x64.zip", "sha256": "952ec845408e343f273eab109e62a9c7732178d93985120736da4a171d41b9b0", "arch": "x64", "notes": "phpredis 6.3.0 for PHP 8.1; sha256 computed by Ebur from php.net" },
-      { "version": "8.0", "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.0-nts-vs16-x64.zip", "sha256": "9d3143049d3c27e715ea92a023dfab92389df985aec224d6ed9d092b4ba5ea9a", "arch": "x64", "notes": "phpredis 6.3.0 for PHP 8.0; sha256 computed by Ebur from php.net" },
-      { "version": "7.4", "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-7.4-nts-vc15-x64.zip", "sha256": "c74f1fb5500b493050839330b4cbfb84dafc07da99b898939ac4b690fe74de1a", "arch": "x64", "notes": "phpredis 6.3.0 for PHP 7.4; sha256 computed by Ebur from php.net" }
-    ],
-    "cloudflared": [
-      {
-        "version": "2026.11.1",
-        "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-windows-amd64.exe",
-        "sha256": "341deda3db5ec498a0482254d6c38c0b7cf01a30c37bb5dd95d2216d08955e35",
-        "file": "cloudflared.exe",
-        "arch": "x64",
-        "notes": "TOOL-04 share links (quick tunnels); sha256 from the GitHub release digest; newer than the 14-day rule because it fixes VULN-187395 and lets quick tunnels fall back to HTTP/2"
-      }
-    ],
-    "composer": [
-      {
-        "version": "2.11.3",
-        "url": "https://getcomposer.org/download/2.11.3/composer.phar",
-        "sha256": "04f8b003da4e3a2459056591fbfebd02b4dc3e5adeb158616b90cf55a65113ec",
-        "file": "composer.phar",
-        "arch": "x64",
-        "notes": "PHP-07; sha256 from getcomposer.org; 2.11.3 fixes GHSA-374h-4mh9-7rpm (arbitrary code execution)"
-      }
-    ],
-    "cacert": [
-      {
-        "version": "2026.11.5",
-        "url": "https://curl.se/ca/cacert-2026-11-05.pem",
-        "sha256": "427c064216761a1e72a8b30f0d954d08cb6e4435a82091fb865afd20c8497285",
-        "file": "cacert.pem",
-        "arch": "x64",
-        "notes": "Mozilla root certificates as published by curl; PHP trusts these plus the Ebur CA (SSL-04)"
-      }
-    ],
-    "adminer": [
-      {
-        "version": "6.3.1",
-        "url": "https://github.com/vrana/adminer/releases/download/v6.3.1/adminer-6.3.1.php",
-        "sha256": "a9aed04e4e68c4e46283804a69ee70cad4fbf23203b46470b760868b2fd9bd76",
-        "file": "index.php",
-        "arch": "x64",
-        "notes": "single PHP file, all database drivers; sha256 from the GitHub release digest"
       }
     ]
   }
