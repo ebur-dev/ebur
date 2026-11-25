@@ -26,6 +26,7 @@ import (
 	"github.com/ebur-dev/ebur/core/install"
 	"github.com/ebur-dev/ebur/core/paths"
 	"github.com/ebur-dev/ebur/core/project"
+	"github.com/ebur-dev/ebur/core/provision"
 	"github.com/ebur-dev/ebur/core/runtimes"
 	"github.com/ebur-dev/ebur/core/setup"
 	"github.com/ebur-dev/ebur/core/shellenv"
@@ -108,6 +109,7 @@ type Overview struct {
 	PHPInstalled []string        `json:"phpInstalled"`
 	HTTPS        bool            `json:"https"`
 	Adminer      bool            `json:"adminer"`
+	Mail         bool            `json:"mail"` // Mailpit installed (TOOL-03)
 	TLD          string          `json:"tld"`
 	Root         string          `json:"root"`
 	Version      string          `json:"version"`
@@ -149,6 +151,8 @@ func (a *App) Overview() (Overview, error) {
 	ov.HTTPS = certs.Dir(a.root.SSL()).Exists()
 	adminer, _ := runtimes.Installed(a.root, "adminer")
 	ov.Adminer = len(adminer) > 0
+	mail, _ := runtimes.Installed(a.root, "mailpit")
+	ov.Mail = len(mail) > 0
 	scheme := "http"
 	if ov.HTTPS {
 		scheme = "https"
@@ -428,6 +432,35 @@ func (a *App) Database() DBInfo {
 		info.Adminer = scheme + "://db." + cfg.TLD
 	}
 	return info
+}
+
+// MailInfo is what the Mail capture card shows (TOOL-03).
+type MailInfo struct {
+	Installed bool   `json:"installed"`
+	URL       string `json:"url"`
+	SMTPPort  int    `json:"smtpPort"`
+}
+
+func (a *App) Mail() MailInfo {
+	cfg, _ := config.Load(a.root.Config())
+	inst, _ := runtimes.Installed(a.root, "mailpit")
+	scheme := "http"
+	if certs.Dir(a.root.SSL()).Exists() {
+		scheme = "https"
+	}
+	return MailInfo{Installed: len(inst) > 0, URL: scheme + "://mail." + cfg.TLD, SMTPPort: provision.MailSMTPPort}
+}
+
+// InstallMail downloads Mailpit and restarts running services so it
+// starts and PHP's mail() is pointed at it.
+func (a *App) InstallMail() (MailInfo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	if _, err := install.Runtime(ctx, a.root, "mailpit", "", nil, nil); err != nil {
+		return a.Mail(), withHint(err)
+	}
+	a.restartIfRunning()
+	return a.Mail(), a.after(nil)
 }
 
 // SSLInfo is what the HTTPS panel shows.

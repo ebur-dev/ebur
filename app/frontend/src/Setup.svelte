@@ -12,6 +12,7 @@
   let php = $state('')
   let db = $state('')
   let adminer = $state(true)
+  let mail = $state(true)
   let https = $state(true)
   let steps = $state([])
   let result = $state(null)
@@ -40,7 +41,7 @@
     page = 'install'
     steps = []
     try {
-      await call('RunSetup', { php, db, dbPort: opts.dbPort, adminer: db !== '' && adminer, https })
+      await call('RunSetup', { php, db, dbPort: opts.dbPort, adminer: db !== '' && adminer, mail, https })
     } catch (e) {
       error = errorText(e)
       page = 'choose'
@@ -88,6 +89,12 @@
           <label class="radio"><input type="checkbox" bind:checked={adminer} /> Adminer, to browse databases at <code>db.{opts.tld}</code></label>
           <small class="muted">Port {opts.dbPort}. {opts.dbPortNote}</small>
         {/if}
+      </fieldset>
+
+      <fieldset class="field">
+        <legend>Mail</legend>
+        <label class="radio"><input type="checkbox" bind:checked={mail} /> Catch outgoing email in a local inbox at <code>mail.{opts.tld}</code></label>
+        <small class="muted">Password resets and sign-up emails from your sites land there instead of reaching real people (Mailpit).</small>
       </fieldset>
 
       <fieldset class="field">

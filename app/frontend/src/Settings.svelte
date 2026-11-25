@@ -44,7 +44,26 @@
     }
   }
 
+  let mail = $state(null)
+  let mailBusy = $state(false)
+  let mailError = $state('')
+
+  async function installMail() {
+    mailBusy = true
+    mailError = ''
+    try {
+      mail = await call('InstallMail')
+    } catch (e) {
+      mailError = errorText(e)
+    } finally {
+      mailBusy = false
+    }
+  }
+
+  let mailEnv = $derived(mail ? `MAIL_MAILER=smtp\nMAIL_HOST=127.0.0.1\nMAIL_PORT=${mail.smtpPort}\nMAIL_USERNAME=null\nMAIL_PASSWORD=null\nMAIL_ENCRYPTION=null` : '')
+
   async function load() {
+    mail = await call('Mail')
     hosts = await call('Hosts')
     appearance = await call('Appearance')
     db = await call('Database')
@@ -109,6 +128,27 @@
         {#if db.adminer}<button onclick={() => run('', 'OpenURL', db.adminer)}>Open Adminer</button>{/if}
       </div>
     {/if}
+  </section>
+
+  <section class="card">
+    <h3>Mail capture</h3>
+    {#if !mail}
+      <p class="muted">Loading…</p>
+    {:else if !mail.installed}
+      <p>Catch every email your sites send, such as password resets and sign-ups, in a local inbox instead of sending it to real people.</p>
+      <button class="primary" disabled={mailBusy} onclick={installMail}>{mailBusy ? 'Installing Mailpit…' : 'Install mail capture'}</button>
+    {:else}
+      <dl>
+        <dt>Inbox</dt><dd><button class="link" onclick={() => run('', 'OpenURL', mail.url)}>{mail.url}</button></dd>
+        <dt>SMTP</dt><dd class="mono">127.0.0.1:{mail.smtpPort}</dd>
+      </dl>
+      <p class="muted note">PHP's <code>mail()</code> (WordPress, plain PHP) already goes here. Laravel and Symfony use their own mail settings:</p>
+      <div class="row">
+        <button onclick={() => copy(mailEnv, 'mail')}>{copied === 'mail' ? 'Copied' : 'Copy Laravel .env settings'}</button>
+        <button onclick={() => copy(`MAILER_DSN=smtp://127.0.0.1:${mail.smtpPort}`, 'symfony')}>{copied === 'symfony' ? 'Copied' : 'Copy Symfony MAILER_DSN'}</button>
+      </div>
+    {/if}
+    {#if mailError}<pre class="err">{mailError}</pre>{/if}
   </section>
 
   <section class="card">

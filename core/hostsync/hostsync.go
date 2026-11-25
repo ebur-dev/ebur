@@ -52,6 +52,9 @@ func Wanted(root paths.Root) ([]string, error) {
 	if a, _ := runtimes.Installed(root, "adminer"); len(a) > 0 {
 		set["db."+cfg.TLD] = true
 	}
+	if m, _ := runtimes.Installed(root, "mailpit"); len(m) > 0 {
+		set["mail."+cfg.TLD] = true // TOOL-03
+	}
 	out := make([]string, 0, len(set))
 	for h := range set {
 		out = append(out, h)

@@ -67,6 +67,15 @@
         "notes": "LTS until 2028-06-04; sha256 from the MariaDB downloads API"
       }
     ],
+    "mailpit": [
+      {
+        "version": "1.34.0",
+        "url": "https://github.com/axllent/mailpit/releases/download/v1.34.0/mailpit-windows-amd64.zip",
+        "sha256": "8f080d41374bf22686606374a0a483c8563c1bf29ae078179792392ff8c911d7",
+        "arch": "x64",
+        "notes": "TOOL-03 mail capture; sha256 from the GitHub release digest; 1.34.0 fixes GHSA-v887-64wg-qqc9 (SMTP crash)"
+      }
+    ],
     "composer": [
       {
         "version": "2.11.3",

@@ -84,6 +84,30 @@ func TestRenderPerSitePHP(t *testing.T) {
 	}
 }
 
+// TOOL-03: mail.test forwards to Mailpit's UI, with WebSocket support.
+func TestRenderProxy(t *testing.T) {
+	out := Render(Config{
+		NginxDir: `C:\e\bin\nginx`, LogDir: `C:\e\logs`, TempDir: `C:\e\tmp`, PIDFile: `C:\e\n.pid`,
+		Listen: "127.0.0.1:80", TLSListen: "127.0.0.1:443",
+		Pools:   []php.Pool{{Version: "8.5.13", BasePort: 9100, Size: 1}},
+		Proxies: []Proxy{{Host: "mail.test", Target: "127.0.0.1:8025"}},
+		TLS:     map[string]TLSPair{"mail.test": {Cert: `C:\e\ssl\mail.pem`, Key: `C:\e\ssl\mail-key.pem`}},
+	})
+	for _, want := range []string{
+		"server_name mail.test;",
+		"proxy_pass http://127.0.0.1:8025;",
+		"proxy_set_header Upgrade $http_upgrade;",
+		`ssl_certificate "C:/e/ssl/mail.pem";`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Count(out, "{") != strings.Count(out, "}") {
+		t.Error("unbalanced braces")
+	}
+}
+
 func TestRenderTLS(t *testing.T) {
 	out := Render(Config{
 		NginxDir: `C:\e\bin\nginx`, LogDir: `C:\e\logs`, TempDir: `C:\e\tmp`, PIDFile: `C:\e\n.pid`,

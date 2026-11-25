@@ -163,7 +163,7 @@ The MVP needs 23 Must requirements across runtimes, services, sites and the two 
 | --- | --- | --- | --- |
 | TOOL-01 | The system shall bundle Adminer and serve it at `db.test`. | Must | MVP |
 | TOOL-02 | The system shall show live-tailing logs for PHP, the web server and the database in one viewer. | Should | MVP |
-| TOOL-03 | The system shall run Mailpit and configure PHP's mail settings so all mail lands at `mail.test`. | Should | v1 |
+| TOOL-03 | The system shall run Mailpit and configure PHP's mail settings so all mail lands at `mail.test`. Implemented Nov 25, 2026: Mailpit 1.34.0 bound to 127.0.0.1 only (its own default is all interfaces), no online version checks, any SMTP login accepted, mail kept across restarts; PHP's `mail()` is pointed at it through a managed `ebur-mail.ini`; `ebur mail` and the window show Laravel and Symfony settings. | Should | v1 |
 | TOOL-04 | The system shall expose a site publicly through a Cloudflare tunnel with `ebur share <site>` and show the URL. | Should | v1 |
 | TOOL-05 | The system shall save and restore named database snapshots. | Should | v1 |
 | TOOL-06 | The system shall capture `dump()` / `dd()` output in a side panel. | Could | v2 |

@@ -235,6 +235,9 @@ func printStatus(st host.Status) {
 		if st.Info.Adminer != "" {
 			fmt.Printf("  %s  ->  Adminer (credentials: ebur db)\n", strings.Replace(st.Info.Adminer, "http:", scheme+":", 1))
 		}
+		if st.Info.Mail != "" {
+			fmt.Printf("  %s  ->  Mailpit: all mail your sites send (settings: ebur mail)\n", strings.Replace(st.Info.Mail, "http:", scheme+":", 1))
+		}
 	}
 	for _, s := range st.Info.Skipped {
 		fmt.Printf("  skipped www\\%s: %s\n", s.Folder, s.Reason)

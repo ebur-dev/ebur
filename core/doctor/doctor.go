@@ -71,6 +71,7 @@ func Run(root paths.Root, opt Options) []Check {
 		{"mariadb", false, "ebur install mariadb"},
 		{"adminer", false, "ebur install adminer"},
 		{"composer", false, "ebur install composer"},
+		{"mailpit", false, "ebur install mailpit"},
 	} {
 		c, v := checkRuntime(root, cfg, rt.name, rt.required, rt.install)
 		add(c)
@@ -90,6 +91,9 @@ func Run(root paths.Root, opt Options) []Check {
 	if certs.Dir(root.SSL()).Exists() {
 		wanted = append(wanted, 443)
 	}
+	if active["mailpit"] != "" {
+		wanted = append(wanted, provision.MailSMTPPort, provision.MailUIPort)
+	}
 	if active["mariadb"] != "" {
 		wanted = append(wanted, cfg.DBPort)
 	}
@@ -106,6 +110,9 @@ func Run(root paths.Root, opt Options) []Check {
 	}
 	if active["adminer"] != "" {
 		hosts = append(hosts, "db."+cfg.TLD)
+	}
+	if active["mailpit"] != "" {
+		hosts = append(hosts, "mail."+cfg.TLD)
 	}
 	hostsFile := opt.HostsFile
 	if hostsFile == "" {

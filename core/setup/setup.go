@@ -49,6 +49,7 @@ type Choices struct {
 	DB      string `json:"db"`
 	DBPort  int    `json:"dbPort"`
 	Adminer bool   `json:"adminer"`
+	Mail    bool   `json:"mail"` // Mailpit catches outgoing mail (TOOL-03)
 	HTTPS   bool   `json:"https"`
 }
 
@@ -175,6 +176,9 @@ func Run(ctx context.Context, root paths.Root, c Choices, hooks Hooks, emit func
 			steps = append(steps, Step{ID: "adminer", Label: "Adminer (db." + tldOf(root) + ")"})
 		}
 	}
+	if c.Mail {
+		steps = append(steps, Step{ID: "mailpit", Label: "Mail capture (mail." + tldOf(root) + ")"})
+	}
 	if c.HTTPS {
 		steps = append(steps, Step{ID: "https", Label: "Local HTTPS"})
 	}
@@ -268,6 +272,11 @@ func Run(ctx context.Context, root paths.Root, c Choices, hooks Hooks, emit func
 			if err := installStep("adminer", "adminer", ""); err != nil {
 				return err
 			}
+		}
+	}
+	if c.Mail {
+		if err := installStep("mailpit", "mailpit", ""); err != nil {
+			return err
 		}
 	}
 	var notes []string

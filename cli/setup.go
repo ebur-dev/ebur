@@ -19,6 +19,7 @@ func setupCmd() *cobra.Command {
 		php, db          string
 		dbPort           int
 		noAdminer        bool
+		noMail           bool
 		noHTTPS, noStart bool
 	)
 	c := &cobra.Command{
@@ -37,7 +38,7 @@ func setupCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			ch := setup.Choices{PHP: php, DB: db, DBPort: dbPort, Adminer: !noAdminer, HTTPS: !noHTTPS}
+			ch := setup.Choices{PHP: php, DB: db, DBPort: dbPort, Adminer: !noAdminer, Mail: !noMail, HTTPS: !noHTTPS}
 			if ch.PHP == "" {
 				ch.PHP = opts.PHPDefault
 			}
@@ -64,6 +65,7 @@ func setupCmd() *cobra.Command {
 			} else {
 				fmt.Println("  Database:   none")
 			}
+			fmt.Printf("  Mail:       %v\n", map[bool]string{true: "captured by Mailpit at mail." + opts.TLD, false: "no capture"}[ch.Mail])
 			fmt.Printf("  HTTPS:      %v\n", map[bool]string{true: "yes (Windows will ask to trust Ebur's certificate)", false: "no"}[ch.HTTPS])
 			for _, w := range opts.Warnings {
 				fmt.Println("  warning:", w)
@@ -111,6 +113,7 @@ func setupCmd() *cobra.Command {
 	c.Flags().StringVar(&db, "db", "", `MariaDB version, e.g. 12.3, or "none" (default: newest LTS)`)
 	c.Flags().IntVar(&dbPort, "db-port", 0, "database port (default: 3306, or the next free one)")
 	c.Flags().BoolVar(&noAdminer, "no-adminer", false, "do not install Adminer")
+	c.Flags().BoolVar(&noMail, "no-mail", false, "do not install Mailpit (mail capture)")
 	c.Flags().BoolVar(&noHTTPS, "no-https", false, "do not set up local HTTPS")
 	c.Flags().BoolVar(&noStart, "no-start", false, "install only; do not start services or edit the hosts file")
 	return c

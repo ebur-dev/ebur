@@ -34,6 +34,7 @@ you install them, checks each download's SHA-256, and keeps them in `bin\`.
 | Nginx | nginx.org | BSD-2-Clause |
 | MariaDB | mariadb.org | GPL-2.0 |
 | Composer | getcomposer.org | MIT |
+| Mailpit (mail capture) | github.com/axllent/mailpit | MIT |
 | Adminer | github.com/vrana/adminer | Apache-2.0 or GPL-2.0 |
 | CA certificate bundle (Mozilla roots, via curl) | curl.se | MPL-2.0 |
 

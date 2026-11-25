@@ -60,7 +60,7 @@ func (t *tray) refresh() {
 	}
 	t.svc.noticeSites(ov) // new sites from the watcher: map their names
 	summary := ov.Status.Summary
-	sig := fmt.Sprintf("%s|%s|%v|%v|%v", summary, ov.PHPActive, ov.PHPInstalled, siteURLs(ov), ov.Adminer)
+	sig := fmt.Sprintf("%s|%s|%v|%v|%v|%v", summary, ov.PHPActive, ov.PHPInstalled, siteURLs(ov), ov.Adminer, ov.Mail)
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if sig == t.lastSig {
@@ -158,6 +158,19 @@ func (t *tray) rebuild(ov Overview) {
 		open.AddSeparator()
 		open.Add("Adminer (db." + ov.TLD + ")").OnClick(func(*application.Context) {
 			t.do("Open Adminer", func() error { return t.svc.OpenURL(u) })
+		})
+	}
+	if ov.Mail {
+		scheme := "http"
+		if ov.HTTPS {
+			scheme = "https"
+		}
+		u := scheme + "://mail." + ov.TLD
+		if !ov.Adminer {
+			open.AddSeparator()
+		}
+		open.Add("Mailpit: caught mail (mail." + ov.TLD + ")").OnClick(func(*application.Context) {
+			t.do("Open Mailpit", func() error { return t.svc.OpenURL(u) })
 		})
 	}
 	m.Add("Open www folder").OnClick(func(*application.Context) {

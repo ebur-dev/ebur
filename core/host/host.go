@@ -50,6 +50,7 @@ type Info struct {
 	MariaDB     string          `json:"mariadb,omitempty"`
 	HTTPS       bool            `json:"https,omitempty"`
 	Adminer     string          `json:"adminer,omitempty"` // URL
+	Mail        string          `json:"mail,omitempty"`    // Mailpit URL (TOOL-03)
 	Sites       []sites.Site    `json:"sites"`
 	Skipped     []sites.Skipped `json:"skipped,omitempty"`
 }

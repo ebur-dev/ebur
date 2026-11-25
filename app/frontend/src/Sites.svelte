@@ -65,6 +65,9 @@
 {#if ov.adminer}
   <p class="muted">Database: <button class="link" onclick={() => run('', 'OpenURL', (ov.https ? 'https' : 'http') + '://db.' + ov.tld)}>Adminer at db.{ov.tld}</button> (credentials in Settings)</p>
 {/if}
+{#if ov.mail}
+  <p class="muted">Mail: everything your sites send is caught at <button class="link" onclick={() => run('', 'OpenURL', (ov.https ? 'https' : 'http') + '://mail.' + ov.tld)}>mail.{ov.tld}</button>, never delivered.</p>
+{/if}
 
 {#each ov.skipped as s}
   <p class="warn">Skipped <code>www\{s.folder}</code>: {s.reason}</p>

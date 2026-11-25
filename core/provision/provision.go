@@ -113,6 +113,13 @@ func MariaDBPaths(root paths.Root, version string) (dataDir, myIni string) {
 	return filepath.Join(root.Data(), "mariadb", s), filepath.Join(root.Etc(), "mariadb", s, "my.ini")
 }
 
+// Mailpit's ports (TOOL-03): PHP sends mail to the SMTP port, and
+// mail.<tld> forwards to the UI port. Both listen on 127.0.0.1 only.
+const (
+	MailSMTPPort = 1025
+	MailUIPort   = 8025
+)
+
 // WriteMyIni (re)writes my.ini for a version with the given port. The
 // stack calls it on every start, so a db_port change needs no re-setup.
 func WriteMyIni(root paths.Root, version string, port int) (string, error) {

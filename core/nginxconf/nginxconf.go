@@ -24,6 +24,9 @@ type Config struct {
 	// default. Each site is sent to the pool for its Site.PHP.Version
 	// (PHP-04), or to the default pool.
 	Pools []php.Pool
+	// Proxies forward a host name to a local web UI, e.g. mail.test to
+	// Mailpit (TOOL-03).
+	Proxies []Proxy
 
 	// HTTPS (SSL-02). Empty TLSListen means HTTP only.
 	TLSListen string             // e.g. "127.0.0.1:443"
@@ -34,6 +37,9 @@ type Config struct {
 
 // TLSPair is a certificate chain and its key.
 type TLSPair struct{ Cert, Key string }
+
+// Proxy serves Host by forwarding to Target, e.g. "127.0.0.1:8025".
+type Proxy struct{ Host, Target string }
 
 func q(path string) string {
 	return `"` + strings.ReplaceAll(filepath.ToSlash(path), `"`, `\"`) + `"`
@@ -52,6 +58,16 @@ func (c Config) upstreamFor(s sites.Site) string {
 		return "php-missing"
 	}
 	return upstreamName(c.Pools[0])
+}
+
+// tlsFor returns the HTTPS listen lines for host, or "" without a cert.
+func (c Config) tlsFor(host string) string {
+	pair, ok := c.TLS[host]
+	if !ok || c.TLSListen == "" {
+		return ""
+	}
+	return fmt.Sprintf("        listen %s ssl;\n        http2 on;\n        ssl_certificate %s;\n        ssl_certificate_key %s;\n",
+		c.TLSListen, q(pair.Cert), q(pair.Key))
 }
 
 // Render returns the full nginx.conf.
@@ -115,11 +131,7 @@ http {
 
 	params := q(filepath.Join(c.NginxDir, "conf", "fastcgi_params"))
 	for _, s := range c.Sites {
-		tls := ""
-		if pair, ok := c.TLS[s.Host]; ok && c.TLSListen != "" {
-			tls = fmt.Sprintf("        listen %s ssl;\n        http2 on;\n        ssl_certificate %s;\n        ssl_certificate_key %s;\n",
-				c.TLSListen, q(pair.Cert), q(pair.Key))
-		}
+		tls := c.tlsFor(s.Host)
 		fmt.Fprintf(&b, `
     server {
         listen %s;
@@ -144,6 +156,25 @@ http {
         location ~ /\.(?!well-known) { deny all; }
     }
 `, c.Listen, tls, s.Host, q(s.DocRoot), params, c.upstreamFor(s))
+	}
+	for _, p := range c.Proxies {
+		fmt.Fprintf(&b, `
+    server {
+        listen %s;
+%s        server_name %s;
+
+        location / {
+            proxy_pass http://%s;
+            proxy_http_version 1.1;
+            # Live updates use a WebSocket.
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_read_timeout 1h;
+            proxy_buffering off;
+        }
+    }
+`, c.Listen, c.tlsFor(p.Host), p.Host, p.Target)
 	}
 	b.WriteString("}\n")
 	return b.String()
