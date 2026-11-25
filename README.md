@@ -80,6 +80,7 @@ ebur install mysql 8.4      MySQL next to MariaDB, on its own port (also 8.0, 5.
 ebur db default mysql       new projects use MySQL (or: ebur new shop --laravel --db mysql)
 ebur ssl install            local HTTPS (ssl uninstall removes it)
 ebur hosts sync             map site names to 127.0.0.1
+ebur tld localhost          sites at <name>.localhost: no hosts file needed (for locked-down PCs)
 ebur exec composer install  run a command with Ebur's PHP and Composer
 ebur terminal               open a console with Ebur's tools on PATH
 ebur doctor                 find and explain problems

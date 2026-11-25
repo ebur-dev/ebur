@@ -53,6 +53,12 @@ type Settings struct {
 	DefaultDB string `json:"default_db,omitempty"`
 }
 
+// SelfResolving reports whether names under tld reach this computer
+// without the hosts file: browsers send every *.localhost name to
+// 127.0.0.1 themselves (SITE-04). Windows' own resolver, which PHP uses,
+// does not, so a site cannot call its own address with it.
+func SelfResolving(tld string) bool { return tld == "localhost" }
+
 // Defaults returns the settings used for a fresh install.
 func Defaults() Settings {
 	return Settings{
@@ -97,6 +103,12 @@ func (s Settings) Validate() error {
 	case "", "system", "light", "dark":
 	default:
 		return fmt.Errorf("config: unknown theme %q (use system, light or dark)", s.Theme)
+	}
+	// SITE-04: the elevated hosts helper only accepts these two endings.
+	switch s.TLD {
+	case "test", "localhost":
+	default:
+		return fmt.Errorf("config: tld %q is not supported (use test or localhost)", s.TLD)
 	}
 	if s.DBPort < 1024 || s.DBPort > 65535 {
 		return fmt.Errorf("config: db_port %d must be between 1024 and 65535", s.DBPort)

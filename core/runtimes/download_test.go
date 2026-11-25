@@ -24,6 +24,9 @@ type flakyServer struct {
 	body    []byte
 	drops   int
 	noRange bool
+	// stalls: for this many requests, send half and then wait until the
+	// client gives up, so a cancel always lands mid-download.
+	stalls int
 
 	mu       sync.Mutex
 	requests []string // Range header of each request ("" for none)
@@ -36,6 +39,10 @@ func (s *flakyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	drop := s.drops > 0
 	if drop {
 		s.drops--
+	}
+	stall := s.stalls > 0
+	if stall {
+		s.stalls--
 	}
 	s.mu.Unlock()
 	if r.URL.Path == "/missing.zip" {
@@ -53,6 +60,16 @@ func (s *flakyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 	rest := s.body[start:]
+	if stall {
+		half := rest[:len(rest)/2]
+		w.Write(half)
+		s.mu.Lock()
+		s.sent += len(half)
+		s.mu.Unlock()
+		w.(http.Flusher).Flush()
+		<-r.Context().Done() // until the client cancels
+		return
+	}
 	if drop {
 		half := rest[:len(rest)/2]
 		w.Write(half)
@@ -113,7 +130,7 @@ func TestResumeAfterDrop(t *testing.T) {
 
 func TestResumeOnNextInstall(t *testing.T) {
 	z := bigZip(t)
-	s := &flakyServer{body: z}
+	s := &flakyServer{body: z, stalls: 1}
 	in, url := flakySetup(t, s)
 	rel := manifest.Release{Version: "1.0", URL: url + "/t.zip", SHA256: sum(z)}
 	ctx, cancel := context.WithCancel(context.Background())

@@ -16,6 +16,7 @@
   let node = $state(false)
   let redis = $state(false)
   let https = $state(true)
+  let tld = $state('test') // set from the options: .localhost when the hosts file looks locked
   let steps = $state([])
   let result = $state(null)
   let offs = []
@@ -23,6 +24,7 @@
   onMount(async () => {
     try {
       opts = await call('SetupOptions')
+      tld = opts.tld
       php = opts.phpDefault
       db = opts.dbDefault
     } catch (e) {
@@ -43,7 +45,7 @@
     page = 'install'
     steps = []
     try {
-      await call('RunSetup', { php, db, dbPort: opts.dbPort, adminer: db !== '' && adminer, mail, node, redis, https })
+      await call('RunSetup', { php, db, dbPort: opts.dbPort, adminer: db !== '' && adminer, mail, node, redis, https, tld })
     } catch (e) {
       error = errorText(e)
       page = 'choose'
@@ -109,6 +111,17 @@
         <legend>Redis</legend>
         <label class="radio"><input type="checkbox" bind:checked={redis} /> Install Redis for caching, sessions and queues</label>
         <small class="muted">Runs on this computer only (127.0.0.1:6379), with PHP's redis extension. About 14 MB; you can add it later in Settings.</small>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend>Site addresses</legend>
+        <label class="radio"><input type="radio" bind:group={tld} value="test" /> <code>&lt;name&gt;.test</code>: works everywhere, maps names in the Windows hosts file (one administrator prompt)</label>
+        <label class="radio"><input type="radio" bind:group={tld} value="localhost" /> <code>&lt;name&gt;.localhost</code>: no hosts file needed</label>
+        {#if opts.hostsBlocked}
+          <small class="warn">Security software on this PC seems to lock the hosts file, so <code>.localhost</code> is suggested. Limit: PHP code that calls its own site's address (e.g. WordPress scheduled tasks) cannot reach <code>.localhost</code> names. You can switch later in Settings.</small>
+        {:else}
+          <small class="muted"><code>.test</code> is recommended. <code>.localhost</code> is for PCs where the hosts file cannot be changed. You can switch later in Settings.</small>
+        {/if}
       </fieldset>
 
       <fieldset class="field">

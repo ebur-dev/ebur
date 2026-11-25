@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ebur-dev/ebur/core/config"
 	"github.com/ebur-dev/ebur/core/paths"
 )
 
@@ -18,6 +19,17 @@ func TestWanted(t *testing.T) {
 	got, err := Wanted(root)
 	if err != nil || strings.Join(got, ",") != "blog.test,db.test,shop.test" {
 		t.Fatalf("%v %v", got, err)
+	}
+	// SITE-04: .localhost names need no hosts entries, so nothing to map
+	// and no administrator prompt.
+	cfg := config.Defaults()
+	cfg.TLD = "localhost"
+	config.Save(root.Config(), cfg)
+	if got, err := Wanted(root); err != nil || len(got) != 0 {
+		t.Fatalf("localhost wanted %v %v", got, err)
+	}
+	if changed, err := AutoSync(root, []string{"shop.test"}); changed || err != nil {
+		t.Fatalf("AutoSync with .localhost: %v %v", changed, err)
 	}
 }
 

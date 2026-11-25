@@ -14,6 +14,7 @@ import (
 
 	"github.com/ebur-dev/ebur/core/certs"
 	"github.com/ebur-dev/ebur/core/config"
+	"github.com/ebur-dev/ebur/core/hostsync"
 	"github.com/ebur-dev/ebur/core/install"
 	"github.com/ebur-dev/ebur/core/manifest"
 	"github.com/ebur-dev/ebur/core/paths"
@@ -46,6 +47,9 @@ type Options struct {
 	WebServer    string     `json:"webServer"`
 	HTTPSTrusted bool       `json:"httpsTrusted"`
 	HavePHP      bool       `json:"havePHP"`
+	// HostsBlocked: the hosts file looks unwritable (e.g. Webroot), so
+	// the wizard suggests .localhost site names (SITE-04).
+	HostsBlocked bool `json:"hostsBlocked"`
 }
 
 // Choices is what the user picked. DB "" means no database.
@@ -58,6 +62,7 @@ type Choices struct {
 	Node    bool   `json:"node"`  // newest Node.js LTS for front-end tools (PROJ-03)
 	Redis   bool   `json:"redis"` // Redis plus the phpredis extension (SVC-05)
 	HTTPS   bool   `json:"https"`
+	TLD     string `json:"tld"` // "test" or "localhost"; "" keeps the current one
 }
 
 // NeedsSetup is true until setup has run, unless PHP was already
@@ -84,6 +89,9 @@ func GetOptions(root paths.Root) (Options, error) {
 		return Options{}, err
 	}
 	o := Options{NeedsSetup: NeedsSetup(root), Root: root.Dir(), TLD: cfg.TLD, WebServer: "Nginx", Warnings: []string{}}
+	if o.HostsBlocked = hostsync.Blocked(root); o.HostsBlocked && o.NeedsSetup {
+		o.TLD = "localhost" // suggested: works without the hosts file
+	}
 	if inst, _ := runtimes.Installed(root, "php"); len(inst) > 0 {
 		o.HavePHP = true
 	}
@@ -246,6 +254,9 @@ func Run(ctx context.Context, root paths.Root, c Choices, hooks Hooks, emit func
 	cfg, err := config.Load(root.Config())
 	if err != nil {
 		return err
+	}
+	if c.TLD != "" {
+		cfg.TLD = c.TLD // SITE-04: before sites, certificates and hosts are set up
 	}
 	mysqlVer, isMySQL := strings.CutPrefix(c.DB, MySQLChoice)
 	switch {

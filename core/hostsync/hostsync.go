@@ -41,6 +41,9 @@ func Wanted(root paths.Root) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	if config.SelfResolving(cfg.TLD) {
+		return []string{}, nil // *.localhost needs no hosts entries (SITE-04)
+	}
 	found, _, err := sites.Scan(root.WWW(), cfg.TLD)
 	if err != nil {
 		return nil, err
@@ -74,6 +77,29 @@ type lastAttempt struct {
 
 func statePath(root paths.Root) string { return filepath.Join(root.Data(), "hosts-sync.json") }
 
+// Blocked reports whether the hosts file looks unwritable for Ebur: the
+// last automatic sync was blocked by security software, or a protected
+// program holds the file open (seen with Webroot). The setup wizard then
+// suggests .localhost names, which need no hosts file (SITE-04).
+func Blocked(root paths.Root) bool {
+	if b, err := os.ReadFile(statePath(root)); err == nil {
+		var last lastAttempt
+		if json.Unmarshal(b, &last) == nil && strings.Contains(last.Reason, "security software") {
+			return true
+		}
+	}
+	lockers, err := winutil.FileLockers(hostsfile.Path())
+	if err != nil {
+		return true // the holder cannot be inspected: in practice security software
+	}
+	for _, l := range lockers {
+		if strings.EqualFold(l.Service, "WRSVC") {
+			return true
+		}
+	}
+	return false
+}
+
 // ErrSkipped means an automatic sync was skipped because the last attempt
 // for the same names was declined or blocked; Reason says which.
 type ErrSkipped struct{ Reason string }
@@ -86,6 +112,12 @@ func (e *ErrSkipped) Error() string {
 // automatic attempt for exactly these names failed, it does not prompt
 // again and returns *ErrSkipped. A manual Sync always tries.
 func AutoSync(root paths.Root, want []string) (bool, error) {
+	// With .localhost nothing needs mapping. Old .test entries are left
+	// alone rather than asking for an administrator prompt to remove
+	// harmless lines (`ebur hosts sync` still clears them).
+	if cfg, err := config.Load(root.Config()); err == nil && config.SelfResolving(cfg.TLD) {
+		return false, nil
+	}
 	if ok, err := InSync(want); err == nil && ok {
 		os.Remove(statePath(root))
 		return false, nil

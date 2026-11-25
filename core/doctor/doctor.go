@@ -149,7 +149,14 @@ func Run(root paths.Root, opt Options) []Check {
 	if hostsFile == "" {
 		hostsFile = filepath.Join(os.Getenv("SystemRoot"), "System32", "drivers", "etc", "hosts")
 	}
-	add(checkHosts(hostsFile, hosts))
+	if config.SelfResolving(cfg.TLD) {
+		// SITE-04: browsers send *.localhost to this computer themselves.
+		add(Check{"Hosts file", OK, "not needed: browsers send .localhost names to this computer by themselves", ""})
+		add(Check{"Site addresses", Info, "sites use .localhost; PHP code that calls its own site's address (WordPress scheduled tasks and Site Health, a Laravel app calling its own URL) cannot reach it, because Windows does not resolve .localhost names",
+			"Where the hosts file can be edited, switch back with `ebur tld test`."})
+	} else {
+		add(checkHosts(hostsFile, hosts))
+	}
 	for _, s := range skipped {
 		add(Check{"Site " + s.Folder, Warn, s.Reason, "Rename the folder in www\\."})
 	}

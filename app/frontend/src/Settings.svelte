@@ -60,6 +60,23 @@
     }
   }
 
+  // Site address ending (SITE-04).
+  let tld = $state(null)
+  let tldBusy = $state(false)
+  let tldError = $state('')
+  async function setTLD(value) {
+    if (!tld || value === tld.tld) return
+    tldBusy = true
+    tldError = ''
+    try {
+      tld = await call('SetTLD', value)
+    } catch (e) {
+      tldError = errorText(e)
+    } finally {
+      tldBusy = false
+    }
+  }
+
   let redis = $state(null)
   let redisBusy = $state(false)
   let redisError = $state('')
@@ -103,6 +120,7 @@
     redis = await call('Redis')
     hosts = await call('Hosts')
     appearance = await call('Appearance')
+    tld = await call('SiteAddresses')
     db = await call('Database')
     ssl = await call('SSL')
   }
@@ -166,6 +184,29 @@
       {/each}
     </div>
     <p class="muted note">System follows the Windows light or dark setting.</p>
+  </section>
+
+  <section class="card">
+    <h3>Site addresses</h3>
+    {#if !tld}
+      <p class="muted">Loading…</p>
+    {:else}
+      <div class="segmented" role="radiogroup" aria-label="Site address ending">
+        {#each ['test', 'localhost'] as t}
+          <button role="radio" aria-checked={tld.tld === t} class:on={tld.tld === t} disabled={tldBusy} onclick={() => setTLD(t)}>.{t}</button>
+        {/each}
+      </div>
+      {#if tld.tld === 'localhost'}
+        <p class="muted note">Sites open at <code>https://&lt;name&gt;.localhost</code>. Browsers send these names to this computer by themselves, so the hosts file is not needed. Limit: PHP code that calls its own site's address (WordPress scheduled tasks and Site Health, a Laravel app calling its own URL) cannot reach it.</p>
+      {:else}
+        <p class="muted note">Sites open at <code>https://&lt;name&gt;.test</code>, mapped in the Windows hosts file (one administrator prompt per change).{tld.hostsBlocked ? ' The hosts file looks locked by security software on this PC: .localhost works without it.' : ''}</p>
+      {/if}
+      {#if tld.wordpress.length}
+        <p class="warn note">WordPress keeps its address in its database: after switching, update {tld.wordpress.join(', ')} in WordPress (Settings &gt; General) or with <code>wp search-replace</code>.</p>
+      {/if}
+      {#if tldBusy}<p class="muted note">Restarting services on the new addresses…</p>{/if}
+      {#if tldError}<pre class="err">{tldError}</pre>{/if}
+    {/if}
   </section>
 
   <section class="card">

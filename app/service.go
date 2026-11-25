@@ -242,6 +242,49 @@ func (w lineWriter) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
+// TLDInfo is the Settings card for site address endings (SITE-04).
+type TLDInfo struct {
+	TLD          string   `json:"tld"` // "test" or "localhost"
+	HostsBlocked bool     `json:"hostsBlocked"`
+	WordPress    []string `json:"wordpress"` // sites that keep their old address after a switch
+}
+
+func (a *App) SiteAddresses() TLDInfo {
+	cfg, _ := config.Load(a.root.Config())
+	info := TLDInfo{TLD: cfg.TLD, HostsBlocked: hostsync.Blocked(a.root), WordPress: []string{}}
+	found, _, _ := sites.Scan(a.root.WWW(), cfg.TLD)
+	for _, s := range found {
+		if _, err := os.Stat(filepath.Join(s.Dir, "wp-includes", "version.php")); err == nil {
+			info.WordPress = append(info.WordPress, s.Name)
+		}
+	}
+	return info
+}
+
+// SetTLD switches site addresses between .test and .localhost and
+// restarts running services so they answer on the new names.
+func (a *App) SetTLD(tld string) (TLDInfo, error) {
+	if tld != "test" && tld != "localhost" {
+		return a.SiteAddresses(), fmt.Errorf("unsupported ending %q (use test or localhost)", tld)
+	}
+	cfg, err := config.Load(a.root.Config())
+	if err != nil {
+		return a.SiteAddresses(), err
+	}
+	if cfg.TLD == tld {
+		return a.SiteAddresses(), nil
+	}
+	cfg.TLD = tld
+	if err := config.Save(a.root.Config(), cfg); err != nil {
+		return a.SiteAddresses(), err
+	}
+	a.restartIfRunning()
+	if !config.SelfResolving(tld) {
+		go a.syncHosts(true) // .test needs the hosts file again (one prompt)
+	}
+	return a.SiteAddresses(), a.after(nil)
+}
+
 // ShareSite gives a site a public trycloudflare.com address for minutes
 // (TOOL-04), installing cloudflared first if needed (about 53 MB).
 func (a *App) ShareSite(site string, minutes int, password bool) (share.Share, error) {

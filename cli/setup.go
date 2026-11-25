@@ -21,6 +21,7 @@ func setupCmd() *cobra.Command {
 		noAdminer        bool
 		noMail, withNode bool
 		withRedis        bool
+		tld              string
 		noHTTPS, noStart bool
 	)
 	c := &cobra.Command{
@@ -39,7 +40,13 @@ func setupCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			ch := setup.Choices{PHP: php, DB: db, DBPort: dbPort, Adminer: !noAdminer, Mail: !noMail, Node: withNode, Redis: withRedis, HTTPS: !noHTTPS}
+			ch := setup.Choices{PHP: php, DB: db, DBPort: dbPort, Adminer: !noAdminer, Mail: !noMail, Node: withNode, Redis: withRedis, HTTPS: !noHTTPS, TLD: strings.TrimPrefix(tld, ".")}
+			if ch.TLD == "" {
+				ch.TLD = opts.TLD // .localhost when the hosts file looks locked
+			}
+			if ch.TLD != "test" && ch.TLD != "localhost" {
+				return &hintErr{fmt.Sprintf("--tld %q is not supported", tld), "Use --tld test or --tld localhost."}
+			}
 			if ch.PHP == "" {
 				ch.PHP = opts.PHPDefault
 			}
@@ -78,6 +85,15 @@ func setupCmd() *cobra.Command {
 			fmt.Printf("  Node.js:    %v\n", map[bool]string{true: "newest LTS, for npm and Vite", false: "no (add later with `ebur node install 24`, or --node)"}[ch.Node])
 			fmt.Printf("  Redis:      %v\n", map[bool]string{true: "yes, on 127.0.0.1:6379, with the phpredis extension", false: "no (add later with `ebur install redis`, or --redis)"}[ch.Redis])
 			fmt.Printf("  HTTPS:      %v\n", map[bool]string{true: "yes (Windows will ask to trust Ebur's certificate)", false: "no"}[ch.HTTPS])
+			if ch.TLD == "localhost" {
+				note := ""
+				if opts.HostsBlocked {
+					note = " because the hosts file looks locked by security software"
+				}
+				fmt.Printf("  Sites:      <name>.localhost%s (no hosts file needed; change later with `ebur tld`)\n", note)
+			} else {
+				fmt.Println("  Sites:      <name>.test (one administrator prompt to update the hosts file)")
+			}
 			for _, w := range opts.Warnings {
 				fmt.Println("  warning:", w)
 			}
@@ -127,6 +143,7 @@ func setupCmd() *cobra.Command {
 	c.Flags().BoolVar(&noMail, "no-mail", false, "do not install Mailpit (mail capture)")
 	c.Flags().BoolVar(&withNode, "node", false, "also install Node.js (newest LTS) for front-end tools")
 	c.Flags().BoolVar(&withRedis, "redis", false, "also install Redis and the phpredis extension")
+	c.Flags().StringVar(&tld, "tld", "", "site address ending: test, or localhost where the hosts file is locked (default: suggested)")
 	c.Flags().BoolVar(&noHTTPS, "no-https", false, "do not set up local HTTPS")
 	c.Flags().BoolVar(&noStart, "no-start", false, "install only; do not start services or edit the hosts file")
 	return c

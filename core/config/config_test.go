@@ -78,4 +78,26 @@ func TestInvalid(t *testing.T) {
 	if d := Defaults(); d.DBPort != 3306 {
 		t.Fatal(d.DBPort)
 	}
+	// SITE-04: only the endings the hosts helper accepts.
+	for _, tld := range []string{"dev", "com", "local"} {
+		bad = Defaults()
+		bad.TLD = tld
+		if err := Save(p, bad); err == nil {
+			t.Errorf("tld %q accepted", tld)
+		}
+	}
+	ok := Defaults()
+	ok.TLD = "localhost"
+	if err := Save(p, ok); err != nil {
+		t.Errorf("localhost rejected: %v", err)
+	}
+	if !SelfResolving("localhost") || SelfResolving("test") {
+		t.Error("SelfResolving")
+	}
+	// MySQL alone may use 3306 like MariaDB's default (SVC-01).
+	ok = Defaults()
+	ok.MySQLPort = ok.DBPort
+	if err := Save(p, ok); err != nil {
+		t.Errorf("mysql_port equal to db_port rejected: %v", err)
+	}
 }
