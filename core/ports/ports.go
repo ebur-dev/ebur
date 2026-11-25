@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 )
 
 // Owner is the process listening on a port.
@@ -29,15 +30,54 @@ func (c *Conflict) Error() string {
 	return fmt.Sprintf("port %d is already in use by %s (PID %d)", c.Port, c.Owner.Name, c.Owner.PID)
 }
 
-// Hint suggests a next step, following NFR-14.
+// Hint suggests a next step, following NFR-14. It recognises the local
+// development stacks people most often have installed already, because
+// "close httpd.exe" does not tell anyone where httpd.exe came from.
 func (c *Conflict) Hint() string {
 	switch {
 	case c.Owner.PID == 4:
-		return "Windows' HTTP service (http.sys) holds the port, usually for IIS, Skype for Business or Web Deploy. Stop that service or choose another port in Settings."
+		return "Windows' HTTP service (http.sys) holds the port, usually for IIS, Skype for Business or Web Deploy. Stop that service (for IIS: the World Wide Web Publishing Service, W3SVC, in services.msc), then try again."
 	case c.Owner.PID == 0:
-		return "Close the other program, or choose another port in Settings."
+		return "Close the other program, then try again."
 	}
-	return fmt.Sprintf("Close %s, or choose another port in Settings.", c.Owner.Name)
+	if h := knownStack(c.Owner); h != "" {
+		return h
+	}
+	where := c.Owner.Name
+	if c.Owner.Path != "" {
+		where = c.Owner.Path
+	}
+	return fmt.Sprintf("Close %s, then try again.", where)
+}
+
+// knownStack explains how to stop a program that belongs to another local
+// web stack, or returns "".
+func knownStack(o Owner) string {
+	p := strings.ToLower(strings.ReplaceAll(o.Path, "/", `\`))
+	name := strings.ToLower(o.Name)
+	what := "web server"
+	switch {
+	case strings.HasPrefix(name, "mysqld"), strings.HasPrefix(name, "mariadbd"):
+		what = "database"
+	case strings.HasPrefix(name, "httpd"):
+		what = "Apache web server"
+	case strings.HasPrefix(name, "nginx"):
+		what = "Nginx web server"
+	}
+	const after = " Ebur can use the port once it is stopped; the two cannot serve on the same port at the same time."
+	switch {
+	case strings.Contains(p, `\xampp`):
+		return "This is XAMPP's " + what + ". Stop it in the XAMPP Control Panel, and untick its Autostart there so it does not come back after a restart." + after
+	case strings.Contains(p, `\wamp`):
+		return "This is WampServer's " + what + ". Right-click the WampServer icon in the tray and choose Stop All Services, or quit WampServer." + after
+	case strings.Contains(p, `\laragon`):
+		return "This is Laragon's " + what + ". Click Stop All in Laragon, or quit it." + after
+	case strings.Contains(p, `\ampps`):
+		return "This is AMPPS's " + what + ". Stop it in the AMPPS control panel." + after
+	case strings.HasPrefix(name, "httpd"):
+		return fmt.Sprintf("This is an Apache web server (%s). If it runs as a Windows service (often named Apache2.4), stop it in Services (services.msc) and set its Startup type to Manual; otherwise close the program that started it.%s", o.Path, after)
+	}
+	return ""
 }
 
 // Check returns nil if port is free on 127.0.0.1 and on all interfaces,

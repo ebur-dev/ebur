@@ -127,9 +127,20 @@ func GetOptions(root paths.Root) (Options, error) {
 		o.DB = append(o.DB, DBOption{Version: MySQLChoice + r.Version, Label: label})
 	}
 	o.DBPort, o.DBPortNote = pickDBPort(cfg.DBPort)
+	var busy []*ports.Conflict
 	for _, p := range []int{80, 443} {
 		var c *ports.Conflict
 		if errors.As(ports.Check(p), &c) && !strings.HasPrefix(strings.ToLower(c.Owner.Path), strings.ToLower(root.Dir())) {
+			busy = append(busy, c)
+		}
+	}
+	switch {
+	case len(busy) == 2 && busy[0].Owner.PID != 0 && busy[0].Owner.PID == busy[1].Owner.PID:
+		// One program holds both (typically another Apache): say it once.
+		o.Warnings = append(o.Warnings, fmt.Sprintf("Ports 80 and 443 are already in use by %s (PID %d). %s",
+			busy[0].Owner.Name, busy[0].Owner.PID, busy[0].Hint()))
+	default:
+		for _, c := range busy {
 			o.Warnings = append(o.Warnings, c.Error()+". "+c.Hint())
 		}
 	}

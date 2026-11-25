@@ -78,8 +78,31 @@ func TestMessages(t *testing.T) {
 		t.Error(sys.Hint())
 	}
 	unknown := &Conflict{Port: 443}
-	if !strings.Contains(unknown.Error(), "another program") || !strings.Contains(unknown.Hint(), "Settings") {
+	if !strings.Contains(unknown.Error(), "another program") || strings.Contains(unknown.Hint(), "Settings") {
 		t.Error(unknown.Error(), unknown.Hint())
+	}
+}
+
+// Other local stacks are named, with how to stop them, and no hint points
+// at a setting that does not exist (web ports are fixed at 80 and 443).
+func TestHintsNameOtherStacks(t *testing.T) {
+	cases := []struct {
+		owner Owner
+		want  string
+	}{
+		{Owner{PID: 11376, Name: "httpd.exe", Path: `C:\xampp\apache\bin\httpd.exe`}, "XAMPP's Apache web server"},
+		{Owner{PID: 2, Name: "mysqld.exe", Path: `C:\xampp\mysql\bin\mysqld.exe`}, "XAMPP's database"},
+		{Owner{PID: 3, Name: "httpd.exe", Path: `C:\wamp64\bin\apache\apache2.4.62\bin\httpd.exe`}, "WampServer"},
+		{Owner{PID: 4 + 1, Name: "httpd.exe", Path: `C:\laragon\bin\apache\httpd-2.4\bin\httpd.exe`}, "Laragon"},
+		{Owner{PID: 6, Name: "httpd.exe", Path: `C:\Apache24\bin\httpd.exe`}, "Apache2.4"},
+		{Owner{PID: 7, Name: "node.exe", Path: `C:\Program Files\nodejs\node.exe`}, `Close C:\Program Files\nodejs\node.exe`},
+		{Owner{PID: 8, Name: "node.exe"}, "Close node.exe"},
+	}
+	for _, c := range cases {
+		h := (&Conflict{Port: 80, Owner: c.owner}).Hint()
+		if !strings.Contains(h, c.want) || strings.Contains(h, "Settings") {
+			t.Errorf("%s: %s", c.owner.Path, h)
+		}
 	}
 }
 
